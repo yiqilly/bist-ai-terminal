@@ -13,6 +13,10 @@ app.add_middleware(
     allow_methods=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"message": "BIST Terminal API is running. Data is at /api/status"}
+
 @app.get("/api/status")
 async def get_status():
     """

@@ -192,8 +192,8 @@
 
     <script>
         async function updateDashboard() {
-            // RENDER ADRESİNİZİ BURAYA YAPIŞTIRIN (Örn: https://bist-api.onrender.com/api/status)
-            const api_url = "./live_data.json"; 
+            // Canlı Bulut API Adresiniz
+            const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
             
             try {
                 const res = await fetch(api_url);
@@ -201,13 +201,27 @@
                 
                 console.log("Veriler GitHub'dan okundu:", data);
                 
-                // Arayüzü güncelle (Örnek)
+                // Arayüzü güncelle
                 document.getElementById('last-update').innerText = "Son Güncelleme: " + data.last_update;
                 
-                // NOT: Burada 'data.active_signals' listesini tabloya dökme kodu eklenebilir.
+                // Sinyal Listesini Oluştur
+                const signalList = document.querySelector('.signal-list');
+                signalList.innerHTML = ''; // Mevcutları temizle
+                
+                data.signals.forEach(sig => {
+                    const row = document.createElement('div');
+                    row.className = 'signal-row';
+                    row.innerHTML = `
+                        <span>${sig.symbol}</span>
+                        <span>${sig.price} TL</span>
+                        <span style="color: ${sig.change >= 0 ? '#00ff88' : '#ff4444'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</span>
+                        <span class="badge ${sig.action === 'AL' ? 'badge-primary' : 'badge-secondary'}">${sig.action}</span>
+                    `;
+                    signalList.appendChild(row);
+                });
                 
             } catch (err) {
-                console.error("Veri okuma hatası (Henüz dosya yüklenmemiş olabilir):", err);
+                console.error("Veri okuma hatası:", err);
             }
         }
 
