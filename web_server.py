@@ -183,15 +183,13 @@ def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, sou
 
             for rs in ranked[:20]:
                 s = _serialize_signal(rs)
-                if rs.quality_label in ("A+", "A"):
+                if rs.quality_label in ("Elite", "Strong"):
                     signals_out.append(s)
                     opportunities_out.append(s)
-                else:
+                elif rs.quality_label == "Watchlist":
                     setups_out.append(s)
-
-            for c in candidates:
-                if c.score < 3:
-                    watchlist_out.append(_serialize_candidate(c))
+                else:
+                    watchlist_out.append(s)
 
             # Piyasa bağlamı
             market_out = {
