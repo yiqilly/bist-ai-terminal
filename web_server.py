@@ -123,7 +123,7 @@ def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
     logger.info("Pipeline loop başlatıldı.")
     while True:
         try:
-            snap = bus.latest_snapshot()
+            snap = bus.get_snapshot()
             if snap is None:
                 time.sleep(1)
                 continue
