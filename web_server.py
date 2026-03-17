@@ -130,7 +130,19 @@ def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, sou
             # Tarama + bağlam
             candidates = scanner.scan(snap)
             context    = context_eng.compute(snap, candidates)  # MarketContext
-            ranked     = ranker.rank(candidates, context, candidates)
+
+            # ranker.rank() RegimeResult bekliyor — MarketContext'ten dönüştür
+            from data.models import RegimeResult
+            regime_result = RegimeResult(
+                regime       = context.regime,
+                label        = context.label,
+                strength     = _f(context.market_strength),
+                advancing_pct= _f(context.breadth_pct),
+                avg_momentum = _f(context.avg_momentum),
+                avg_score    = _f(context.avg_score),
+                volatility   = _f(context.volatility),
+            )
+            ranked = ranker.rank(candidates, regime_result, candidates)
 
             # Sektörler
             try:
