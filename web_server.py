@@ -57,6 +57,24 @@ try:
 except Exception:
     _SYMBOL_SECTOR = {}
 
+# ── XU100 endeks verisi (yfinance, 5dk'da bir) ───────────────
+_index_cache = {"val": 0, "change": 0}
+
+def _index_fetch_loop():
+    while True:
+        try:
+            import yfinance as yf
+            t = yf.Ticker("XU100.IS")
+            hist = t.history(period="2d", interval="1d")
+            if len(hist) >= 2:
+                last = hist["Close"].iloc[-1]
+                prev = hist["Close"].iloc[-2]
+                _index_cache["val"]    = round(float(last), 0)
+                _index_cache["change"] = round((last - prev) / prev * 100, 2)
+        except Exception:
+            pass
+        time.sleep(300)  # 5 dakika
+
 # ── Helpers ───────────────────────────────────────────────────
 def _f(v, decimals=2):
     """Float'u güvenli yuvarlar; NaN/Inf → 0."""
@@ -199,8 +217,8 @@ def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, sou
 
             # Piyasa bağlamı
             market_out = {
-                "index_val":  0,
-                "change":     0,
+                "index_val":  _index_cache["val"],
+                "change":     _index_cache["change"],
                 "regime":     context.regime,
                 "label":      context.label,
                 "score":      _f(context.market_strength, 1),
@@ -349,6 +367,9 @@ async def startup_event():
 
     bus.start()
     logger.info("MarketBus başladı.")
+
+    threading.Thread(target=_index_fetch_loop, daemon=True, name="index-fetch").start()
+    logger.info("Endeks fetch thread başlatıldı.")
 
     t = threading.Thread(
         target=_pipeline_loop,
