@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: bist-terminal
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web_server.py
+    envVars:
+      - key: FORCE_MOCK
+        value: "false"        # borsapy denesin, başarısız olursa mock'a geçer
+      - key: UNIVERSE
+        value: "BIST30"       # Ücretsiz tier için daha az sembol
+      - key: PORT
+        fromService:
+          type: web
+          name: bist-terminal
+          property: port

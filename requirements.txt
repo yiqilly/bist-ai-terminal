@@ -1,4 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 yfinance
 pandas
+borsapy
+pyyaml
+requests
+websockets

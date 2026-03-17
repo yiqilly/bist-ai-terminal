@@ -250,6 +250,7 @@
             <span id="h-regime" style="color:var(--warning)">● RANGE</span>
         </div>
         <div class="header-right">
+            <span id="ws-status" style="font-size:11px; font-weight:bold;">○ BAĞLANIYOR…</span>
             <span id="h-clock">00:00:00</span>
             <span id="h-date">01.01.2024</span>
             <button class="btn-refresh" onclick="updateCockpit()">YENİLE</button>
@@ -352,27 +353,71 @@
     <script>
         let currentData = null;
         let activeTab = 'signals';
+        let ws = null;
+        let wsReconnectTimer = null;
 
+        function getWsUrl() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const host  = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+                ? `${location.hostname}:${location.port || 8000}`
+                : location.host;
+            return `${proto}://${host}/ws`;
+        }
+
+        function setStatus(state) {
+            const el = document.getElementById('ws-status');
+            if (!el) return;
+            if (state === 'live') { el.textContent = '● CANLI'; el.style.color = '#4ade80'; }
+            else if (state === 'connecting') { el.textContent = '○ BAĞLANIYOR…'; el.style.color = '#fbbf24'; }
+            else { el.textContent = '✕ BAĞLANTI YOK'; el.style.color = '#f87171'; }
+        }
+
+        function connectWs() {
+            if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+            setStatus('connecting');
+            try { ws = new WebSocket(getWsUrl()); } catch(e) { scheduleReconnect(); return; }
+
+            ws.onmessage = (event) => {
+                try {
+                    currentData = JSON.parse(event.data);
+                    setStatus('live');
+                    applyData();
+                } catch(e) { console.error('WS parse error', e); }
+            };
+
+            ws.onclose = () => { setStatus('disconnected'); scheduleReconnect(); };
+            ws.onerror = () => { setStatus('disconnected'); };
+        }
+
+        function scheduleReconnect() {
+            wsReconnectTimer = setTimeout(connectWs, 5000);
+        }
+
+        function applyData() {
+            if (!currentData) return;
+            // Header
+            document.getElementById('h-idx').innerHTML = `BIST 100: <b class="${currentData.market.change >=0 ? 'color-up':'color-down'}">${currentData.market.index_val} (${currentData.market.change}%)</b>`;
+            document.getElementById('h-regime').innerText = '● ' + currentData.market.regime.split(' ')[1];
+            document.getElementById('h-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#f87171' : '#fbbf24');
+
+            // Stats
+            const all = [...(currentData.signals||[]), ...(currentData.setups||[]), ...(currentData.watchlist||[])];
+            document.getElementById('c-ap').innerText = all.filter(s => s.quality === 'A+').length;
+            document.getElementById('c-a').innerText  = all.filter(s => s.quality === 'A').length;
+            document.getElementById('c-b').innerText  = all.filter(s => s.quality === 'B').length;
+
+            renderHeatmap(all);
+            renderTable();
+        }
+
+        // Eski REST fallback (WebSocket yoksa)
         async function updateCockpit() {
-            const api_url = "https://bist-ai-terminal.onrender.com/api/status?v=" + Date.now();
+            if (ws && ws.readyState === WebSocket.OPEN) return;
             try {
-                const res = await fetch(api_url);
+                const res = await fetch('/api/status');
                 currentData = await res.json();
-                
-                // Header
-                document.getElementById('h-idx').innerHTML = `BIST 100: <b class="${currentData.market.change >=0 ? 'color-up':'color-down'}">${currentData.market.index_val} (${currentData.market.change}%)</b>`;
-                document.getElementById('h-regime').innerText = '● ' + currentData.market.regime.split(' ')[1];
-                document.getElementById('h-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#f87171' : '#fbbf24');
-
-                // Stats
-                const all = [...currentData.signals, ...currentData.setups, ...currentData.watchlist];
-                document.getElementById('c-ap').innerText = all.filter(s => s.quality === 'A+').length;
-                document.getElementById('c-a').innerText = all.filter(s => s.quality === 'A').length;
-                document.getElementById('c-b').innerText = all.filter(s => s.quality === 'B').length;
-
-                renderHeatmap(all);
-                renderTable();
-            } catch (err) { console.error("Update Error:", err); }
+                applyData();
+            } catch (err) { console.error("Fallback fetch error:", err); }
         }
 
         function renderHeatmap(sigs) {
@@ -488,8 +533,8 @@
             document.getElementById('h-date').innerText = d.toLocaleDateString();
         }
         setInterval(tick, 1000);
-        setInterval(updateCockpit, 60000);
-        updateCockpit();
+        setInterval(updateCockpit, 30000); // REST fallback (WS yoksa)
+        connectWs();
         tick();
     </script>
 </body>
