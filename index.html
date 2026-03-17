@@ -181,14 +181,39 @@
             </div>
 
             <div style="text-align: center;">
-                <a href="#" class="btn-primary">Sinyalleri Görüntüle</a>
+                <a href="#" class="btn-primary" onclick="loadSignals()">Sinyalleri Manuel Yenile</a>
             </div>
         </div>
     </div>
 
     <div class="footer">
-        &copy; 2026 BIST Terminal | Bu bir Antigravity tarafından oluşturulmuş demo sayfasıdır.
+        &copy; 2026 BIST Terminal | <span id="last-update">Veriler bekleniyor...</span>
     </div>
 
+    <script>
+        async function updateDashboard() {
+            // RENDER ADRESİNİZİ BURAYA YAPIŞTIRIN (Örn: https://bist-api.onrender.com/api/status)
+            const api_url = "./live_data.json"; 
+            
+            try {
+                const res = await fetch(api_url);
+                const data = await res.json();
+                
+                console.log("Veriler GitHub'dan okundu:", data);
+                
+                // Arayüzü güncelle (Örnek)
+                document.getElementById('last-update').innerText = "Son Güncelleme: " + data.last_update;
+                
+                // NOT: Burada 'data.active_signals' listesini tabloya dökme kodu eklenebilir.
+                
+            } catch (err) {
+                console.error("Veri okuma hatası (Henüz dosya yüklenmemiş olabilir):", err);
+            }
+        }
+
+        // Dakikada bir kontrol et
+        setInterval(updateDashboard, 60000);
+        updateDashboard();
+    </script>
 </body>
 </html>

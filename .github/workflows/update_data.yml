@@ -1,0 +1,35 @@
+name: BIST Data Auto Update
+
+on:
+  schedule:
+    # Her 15 dakikada bir çalıştır (Borsa saatleri içinde optimize edilebilir)
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Manuel çalıştırma butonu ekler
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install yfinance pandas
+
+      - name: Fetch BIST Data
+        run: |
+          python scripts/cloud_fetcher.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "BIST Bot"
+          git config --global user.email "bot@github.com"
+          git add live_data.json
+          git commit -m "Cloud Update: $(date)" || echo "No changes to commit"
+          git push
