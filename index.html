@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST Trading Cockpit v6.0.0</title>
+    <title>BIST Trading Cockpit v6.0.1</title>
     <style>
         :root {
             --bg: #030712;
@@ -228,7 +228,7 @@
 
     <header>
         <div class="logo">
-            <i>💠</i> BIST Trading Cockpit <span style="font-size: 10px; margin-left:10px; color:var(--text-dim)">v6.0.0</span>
+            <i>💠</i> BIST Trading Cockpit <span style="font-size: 10px; margin-left:10px; color:var(--text-dim)">v6.0.1</span>
         </div>
         <div class="header-center">
             <span>BIST 100: <b id="idx-val" class="color-up">---</b></span>
@@ -357,7 +357,7 @@
         let activeTab = 'signals';
 
         async function updateCockpit() {
-            const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
+            const api_url = "https://bist-ai-terminal.onrender.com/api/status?v=" + new Date().getTime(); 
             try {
                 const res = await fetch(api_url);
                 currentData = await res.json();
@@ -382,7 +382,6 @@
         function renderHeatmap(sigs) {
             const hm = document.getElementById('hm-grid');
             hm.innerHTML = '';
-            // Just take some random symbols/fillers to make it look full
             const displayList = sigs.concat(sigs).slice(0, 40);
             displayList.forEach(s => {
                 const cell = document.createElement('div');
@@ -410,17 +409,17 @@
                 const tr = document.createElement('tr');
                 tr.onclick = () => selectSymbol(sig, tr);
                 tr.innerHTML = `
-                    <td style="font-weight:bold; color:var(--accent)">${sig.symbol}</td>
+                    <td style="font-weight:bold; color:var(--accent)">${sig.symbol || '---'}</td>
                     <td>${currentData.market.regime.split(' ')[1] || 'RANGE'}</td>
-                    <td>${sig.strategy}</td>
-                    <td>${sig.setup}</td>
-                    <td style="color:var(--text)">₺${sig.entry}</td>
-                    <td style="color:var(--danger)">₺${sig.stop}</td>
-                    <td style="color:var(--success)">₺${sig.target}</td>
-                    <td>${sig.rr}x</td>
-                    <td>%${sig.trust}</td>
-                    <td>${sig.sector}</td>
-                    <td style="font-weight:bold; color:${sig.quality=='A+'?'var(--success)':'var(--warning)'}">${sig.quality}</td>
+                    <td>${sig.strategy || 'N/A'}</td>
+                    <td>${sig.setup || 'N/A'}</td>
+                    <td style="color:var(--text)">₺${sig.entry || sig.price || '---'}</td>
+                    <td style="color:var(--danger)">₺${sig.stop || '---'}</td>
+                    <td style="color:var(--success)">₺${sig.target || '---'}</td>
+                    <td>${sig.rr || '0'}x</td>
+                    <td>%${sig.trust || '0'}</td>
+                    <td>${sig.sector || '---'}</td>
+                    <td style="font-weight:bold; color:${sig.quality=='A+'?'var(--success)':'var(--warning)'}">${sig.quality || 'B'}</td>
                 `;
                 body.appendChild(tr);
             });
@@ -439,13 +438,12 @@
             document.getElementById('side-action').innerText = sig.action == 'AL' ? 'BUY SIGNAL' : sig.action == 'SAT' ? 'SELL SIGNAL' : 'WATCHLIST';
             document.getElementById('side-action').style.background = sig.action == 'AL' ? '#065f46' : sig.action == 'SAT' ? '#991b1b' : '#1e3a8a';
 
-            document.getElementById('side-entry').innerText = `₺${sig.entry}`;
-            document.getElementById('side-stop').innerText = `₺${sig.stop}`;
-            document.getElementById('side-target').innerText = `₺${sig.target}`;
-            document.getElementById('side-rr').innerText = `${sig.rr}x`;
-            document.getElementById('side-trust').innerText = `%${sig.trust}`;
+            document.getElementById('side-entry').innerText = `₺${sig.entry || sig.price || '0.00'}`;
+            document.getElementById('side-stop').innerText = `₺${sig.stop || '0.00'}`;
+            document.getElementById('side-target').innerText = `₺${sig.target || '0.00'}`;
+            document.getElementById('side-rr').innerText = `${sig.rr || '0'}x`;
+            document.getElementById('side-trust').innerText = `%${sig.trust || '0'}`;
             
-            // Badges
             const bg = document.getElementById('side-badges');
             bg.innerHTML = `
                 <span class="badge ${sig.change > 0 ? 'b-green' : 'b-red'}">${sig.change > 0 ? '✓' : 'X'} Trend</span>
