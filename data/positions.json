@@ -1,0 +1,67 @@
+[
+  {
+    "symbol": "ARCLK",
+    "entry_price": 199.06,
+    "lots": 100,
+    "stop": 195.18,
+    "target": 210.14,
+    "entry_time": "2026-03-15T16:59:20",
+    "notes": "",
+    "status": "STOPPED",
+    "exit_price": 194.54,
+    "exit_time": "2026-03-15T16:59:20",
+    "exit_reason": "stop"
+  },
+  {
+    "symbol": "KOZAA",
+    "entry_price": 49.37,
+    "lots": 100,
+    "stop": 48.66,
+    "target": 51.39,
+    "entry_time": "2026-03-15T17:00:52",
+    "notes": "",
+    "status": "STOPPED",
+    "exit_price": 48.55,
+    "exit_time": "2026-03-15T17:01:12",
+    "exit_reason": "stop"
+  },
+  {
+    "symbol": "MGROS",
+    "entry_price": 103.43,
+    "lots": 100,
+    "stop": 101.77,
+    "target": 108.17,
+    "entry_time": "2026-03-15T17:03:46",
+    "notes": "",
+    "status": "STOPPED",
+    "exit_price": 100.22,
+    "exit_time": "2026-03-16T04:26:16",
+    "exit_reason": "stop"
+  },
+  {
+    "symbol": "ISCTR",
+    "entry_price": 14.25,
+    "lots": 100,
+    "stop": 14.05,
+    "target": 15.50,
+    "entry_time": "2026-03-16T04:35:33",
+    "notes": "",
+    "status": "STOPPED",
+    "exit_price": 14.07,
+    "exit_time": "2026-03-16T10:06:06",
+    "exit_reason": "stop"
+  },
+  {
+    "symbol": "SISE",
+    "entry_price": 42.56,
+    "lots": 100,
+    "stop": 42.42,
+    "target": 42.91,
+    "entry_time": "2026-03-16T10:25:26",
+    "notes": "",
+    "status": "STOPPED",
+    "exit_price": 42.4,
+    "exit_time": "2026-03-16T10:27:26",
+    "exit_reason": "stop"
+  }
+]

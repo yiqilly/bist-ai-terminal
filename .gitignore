@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+err.txt
+out.txt
+logs/
+data/*.json
+!data/positions.json
+dist/
+build/
+*.exe

@@ -1,0 +1,965 @@
+{
+  "AKBNK": {
+    "symbol": "AKBNK",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.938,
+      0.966,
+      0.965,
+      0.887,
+      0.886
+    ],
+    "vol_history": [
+      1.483,
+      0.846,
+      0.853,
+      1.338,
+      1.136
+    ],
+    "breakout_distance_pct": 28.88,
+    "sector_score": 66.7,
+    "edge_score": 0,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "ASELS": {
+    "symbol": "ASELS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.19,
+      1.174,
+      1.193,
+      1.168,
+      1.155
+    ],
+    "vol_history": [
+      0.793,
+      0.662,
+      0.431,
+      0.538,
+      0.523
+    ],
+    "breakout_distance_pct": 8.61,
+    "sector_score": 63.2,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "BIMAS": {
+    "symbol": "BIMAS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.99,
+      0.978,
+      1.039,
+      1.078,
+      1.082
+    ],
+    "vol_history": [
+      0.914,
+      0.722,
+      1.612,
+      1.352,
+      0.7
+    ],
+    "breakout_distance_pct": 2.48,
+    "sector_score": 60.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "GARAN": {
+    "symbol": "GARAN",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.942,
+      0.952,
+      0.942,
+      0.901,
+      0.894
+    ],
+    "vol_history": [
+      0.808,
+      0.827,
+      0.561,
+      0.85,
+      0.817
+    ],
+    "breakout_distance_pct": 24.02,
+    "sector_score": 66.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "GUBRF": {
+    "symbol": "GUBRF",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.027,
+      1.051,
+      1.001,
+      1.012,
+      1.044
+    ],
+    "vol_history": [
+      1.456,
+      0.996,
+      0.605,
+      0.837,
+      0.518
+    ],
+    "breakout_distance_pct": 6.81,
+    "sector_score": 60.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "HALKB": {
+    "symbol": "HALKB",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.153,
+      1.116,
+      1.058,
+      0.981,
+      0.914
+    ],
+    "vol_history": [
+      1.413,
+      1.6,
+      1.555,
+      0.905,
+      0.906
+    ],
+    "breakout_distance_pct": 26.45,
+    "sector_score": 66.7,
+    "edge_score": 0,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "ISCTR": {
+    "symbol": "ISCTR",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.903,
+      0.912,
+      0.89,
+      0.845,
+      0.851
+    ],
+    "vol_history": [
+      1.225,
+      1.029,
+      0.708,
+      0.96,
+      0.802
+    ],
+    "breakout_distance_pct": 29.42,
+    "sector_score": 66.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "MGROS": {
+    "symbol": "MGROS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.938,
+      0.948,
+      0.934,
+      0.955,
+      0.954
+    ],
+    "vol_history": [
+      1.001,
+      0.806,
+      0.947,
+      1.159,
+      0.894
+    ],
+    "breakout_distance_pct": 15.45,
+    "sector_score": 60.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "ODAS": {
+    "symbol": "ODAS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.108,
+      1.065,
+      1.043,
+      1.078,
+      1.043
+    ],
+    "vol_history": [
+      2.804,
+      1.01,
+      1.032,
+      1.202,
+      0.987
+    ],
+    "breakout_distance_pct": 9.32,
+    "sector_score": 60.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "PETKM": {
+    "symbol": "PETKM",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.025,
+      0.984,
+      0.989,
+      1.05,
+      1.138
+    ],
+    "vol_history": [
+      1.587,
+      0.949,
+      0.795,
+      1.52,
+      1.92
+    ],
+    "breakout_distance_pct": -0.4,
+    "sector_score": 60.9,
+    "edge_score": 2,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "SASA": {
+    "symbol": "SASA",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.939,
+      0.943,
+      0.905,
+      0.953,
+      0.987
+    ],
+    "vol_history": [
+      1.487,
+      0.537,
+      1.43,
+      0.0,
+      2.821
+    ],
+    "breakout_distance_pct": 13.41,
+    "sector_score": 60.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "SISE": {
+    "symbol": "SISE",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.916,
+      0.937,
+      0.919,
+      0.915,
+      0.909
+    ],
+    "vol_history": [
+      0.431,
+      0.507,
+      0.364,
+      0.428,
+      0.411
+    ],
+    "breakout_distance_pct": 22.41,
+    "sector_score": 67.5,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "SOKM": {
+    "symbol": "SOKM",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.993,
+      0.927,
+      0.913,
+      0.908,
+      0.865
+    ],
+    "vol_history": [
+      1.624,
+      2.941,
+      1.831,
+      0.958,
+      1.013
+    ],
+    "breakout_distance_pct": 28.19,
+    "sector_score": 60.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "TCELL": {
+    "symbol": "TCELL",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.995,
+      0.989,
+      0.933,
+      0.959,
+      0.94
+    ],
+    "vol_history": [
+      0.742,
+      0.754,
+      1.03,
+      1.129,
+      0.691
+    ],
+    "breakout_distance_pct": 19.12,
+    "sector_score": 61.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "TUPRS": {
+    "symbol": "TUPRS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.24,
+      1.211,
+      1.201,
+      1.265,
+      1.288
+    ],
+    "vol_history": [
+      1.775,
+      1.624,
+      1.153,
+      1.215,
+      1.051
+    ],
+    "breakout_distance_pct": 5.22,
+    "sector_score": 60.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "ALARK": {
+    "symbol": "ALARK",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.885,
+      0.893,
+      0.887,
+      0.869,
+      0.855
+    ],
+    "vol_history": [
+      0.849,
+      0.845,
+      0.958,
+      0.825,
+      0.924
+    ],
+    "breakout_distance_pct": 30.29,
+    "sector_score": 63.2,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "BRISA": {
+    "symbol": "BRISA",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      0.995,
+      1.018,
+      1.026,
+      1.018,
+      1.041
+    ],
+    "vol_history": [
+      1.956,
+      0.773,
+      0.487,
+      0.76,
+      1.044
+    ],
+    "breakout_distance_pct": 15.04,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": ""
+  },
+  "PRKME": {
+    "symbol": "PRKME",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      1.025,
+      1.03,
+      0.951,
+      0.936,
+      0.95
+    ],
+    "vol_history": [
+      1.532,
+      0.877,
+      1.606,
+      0.798,
+      0.615
+    ],
+    "breakout_distance_pct": 21.59,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": ""
+  },
+  "SKBNK": {
+    "symbol": "SKBNK",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      1.146,
+      1.114,
+      1.115,
+      1.118,
+      1.077
+    ],
+    "vol_history": [
+      0.971,
+      0.878,
+      0.646,
+      0.968,
+      0.733
+    ],
+    "breakout_distance_pct": 16.35,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": ""
+  },
+  "TTKOM": {
+    "symbol": "TTKOM",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.953,
+      0.966,
+      0.946,
+      0.954,
+      0.938
+    ],
+    "vol_history": [
+      0.645,
+      0.768,
+      0.897,
+      0.736,
+      0.601
+    ],
+    "breakout_distance_pct": 24.22,
+    "sector_score": 61.9,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "VAKBN": {
+    "symbol": "VAKBN",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.031,
+      1.021,
+      0.993,
+      0.878,
+      0.86
+    ],
+    "vol_history": [
+      1.386,
+      1.489,
+      0.928,
+      0.98,
+      1.468
+    ],
+    "breakout_distance_pct": 31.28,
+    "sector_score": 66.7,
+    "edge_score": 0,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "YKBNK": {
+    "symbol": "YKBNK",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.958,
+      0.974,
+      0.962,
+      0.898,
+      0.901
+    ],
+    "vol_history": [
+      1.155,
+      1.006,
+      0.907,
+      1.279,
+      0.789
+    ],
+    "breakout_distance_pct": 27.87,
+    "sector_score": 66.7,
+    "edge_score": 1,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "AKMGY": {
+    "symbol": "AKMGY",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      1.113,
+      1.07,
+      1.073,
+      1.087,
+      1.088
+    ],
+    "vol_history": [
+      1.493,
+      1.527,
+      1.147,
+      0.962,
+      0.785
+    ],
+    "breakout_distance_pct": 3.41,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "AYGAZ": {
+    "symbol": "AYGAZ",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      1.176,
+      1.12,
+      1.118,
+      1.113,
+      1.199
+    ],
+    "vol_history": [
+      2.047,
+      1.052,
+      1.072,
+      1.084,
+      1.298
+    ],
+    "breakout_distance_pct": 3.97,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "BAGFS": {
+    "symbol": "BAGFS",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.182,
+      1.146,
+      1.149,
+      1.241,
+      1.262
+    ],
+    "vol_history": [
+      2.271,
+      1.318,
+      0.675,
+      1.237,
+      1.125
+    ],
+    "breakout_distance_pct": 19.71,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": "Sinyaller sureklilik gosteriyor."
+  },
+  "FLAP": {
+    "symbol": "FLAP",
+    "state": "RADAR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-09",
+    "days_in_state": 5,
+    "rs_history": [
+      1.168,
+      1.104,
+      1.133,
+      1.178,
+      1.104
+    ],
+    "vol_history": [
+      0.355,
+      0.295,
+      0.381,
+      0.569,
+      0.513
+    ],
+    "breakout_distance_pct": 11.88,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": ""
+  },
+  "HLGYO": {
+    "symbol": "HLGYO",
+    "state": "İZLENİYOR",
+    "first_seen": "2026-03-09",
+    "state_since": "2026-03-11",
+    "days_in_state": 3,
+    "rs_history": [
+      1.278,
+      1.341,
+      1.252,
+      1.241,
+      1.238
+    ],
+    "vol_history": [
+      1.765,
+      4.515,
+      2.863,
+      1.083,
+      1.506
+    ],
+    "breakout_distance_pct": 9.26,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": "Guc kaybetti, izlemeye alindi."
+  },
+  "DOHOL": {
+    "symbol": "DOHOL",
+    "state": "RADAR",
+    "first_seen": "2026-03-10",
+    "state_since": "2026-03-10",
+    "days_in_state": 4,
+    "rs_history": [
+      1.081,
+      1.052,
+      1.03,
+      1.061
+    ],
+    "vol_history": [
+      0.949,
+      0.583,
+      0.486,
+      1.655
+    ],
+    "breakout_distance_pct": 5.46,
+    "sector_score": 41.3,
+    "edge_score": 1,
+    "note": ""
+  },
+  "AKSEN": {
+    "symbol": "AKSEN",
+    "state": "RADAR",
+    "first_seen": "2026-03-10",
+    "state_since": "2026-03-10",
+    "days_in_state": 4,
+    "rs_history": [
+      1.084,
+      1.075,
+      1.156,
+      1.171
+    ],
+    "vol_history": [
+      1.692,
+      0.933,
+      1.882,
+      1.042
+    ],
+    "breakout_distance_pct": 1.35,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "ANSGR": {
+    "symbol": "ANSGR",
+    "state": "RADAR",
+    "first_seen": "2026-03-10",
+    "state_since": "2026-03-10",
+    "days_in_state": 4,
+    "rs_history": [
+      1.055,
+      1.064,
+      1.079,
+      1.092
+    ],
+    "vol_history": [
+      1.108,
+      1.001,
+      1.071,
+      0.639
+    ],
+    "breakout_distance_pct": 1.14,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "BERA": {
+    "symbol": "BERA",
+    "state": "RADAR",
+    "first_seen": "2026-03-10",
+    "state_since": "2026-03-10",
+    "days_in_state": 4,
+    "rs_history": [
+      1.078,
+      1.065,
+      1.029,
+      0.988
+    ],
+    "vol_history": [
+      1.592,
+      1.174,
+      2.45,
+      1.509
+    ],
+    "breakout_distance_pct": 21.82,
+    "sector_score": 50.0,
+    "edge_score": 0,
+    "note": ""
+  },
+  "GOLTS": {
+    "symbol": "GOLTS",
+    "state": "RADAR",
+    "first_seen": "2026-03-10",
+    "state_since": "2026-03-10",
+    "days_in_state": 4,
+    "rs_history": [
+      0.981,
+      0.967,
+      0.966,
+      0.956
+    ],
+    "vol_history": [
+      2.166,
+      0.725,
+      1.664,
+      0.842
+    ],
+    "breakout_distance_pct": 21.12,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "IHLGM": {
+    "symbol": "IHLGM",
+    "state": "RADAR",
+    "first_seen": "2026-03-11",
+    "state_since": "2026-03-11",
+    "days_in_state": 3,
+    "rs_history": [
+      1.029,
+      1.052,
+      1.057
+    ],
+    "vol_history": [
+      1.603,
+      0.638,
+      0.589
+    ],
+    "breakout_distance_pct": 17.91,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "ULKER": {
+    "symbol": "ULKER",
+    "state": "RADAR",
+    "first_seen": "2026-03-11",
+    "state_since": "2026-03-11",
+    "days_in_state": 3,
+    "rs_history": [
+      0.871,
+      0.849,
+      0.859
+    ],
+    "vol_history": [
+      2.391,
+      1.384,
+      0.91
+    ],
+    "breakout_distance_pct": 30.0,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "INDES": {
+    "symbol": "INDES",
+    "state": "RADAR",
+    "first_seen": "2026-03-11",
+    "state_since": "2026-03-11",
+    "days_in_state": 3,
+    "rs_history": [
+      1.074,
+      1.095,
+      1.06
+    ],
+    "vol_history": [
+      2.808,
+      4.067,
+      1.588
+    ],
+    "breakout_distance_pct": 8.31,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "ANHYT": {
+    "symbol": "ANHYT",
+    "state": "RADAR",
+    "first_seen": "2026-03-12",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.062,
+      1.063
+    ],
+    "vol_history": [
+      1.574,
+      0.816
+    ],
+    "breakout_distance_pct": 5.1,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "CANTE": {
+    "symbol": "CANTE",
+    "state": "RADAR",
+    "first_seen": "2026-03-12",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.928,
+      0.896
+    ],
+    "vol_history": [
+      1.822,
+      1.31
+    ],
+    "breakout_distance_pct": 26.8,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "HEKTS": {
+    "symbol": "HEKTS",
+    "state": "RADAR",
+    "first_seen": "2026-03-12",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      0.956,
+      0.946
+    ],
+    "vol_history": [
+      2.446,
+      2.11
+    ],
+    "breakout_distance_pct": 22.22,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "KORDS": {
+    "symbol": "KORDS",
+    "state": "RADAR",
+    "first_seen": "2026-03-12",
+    "state_since": "2026-03-12",
+    "days_in_state": 2,
+    "rs_history": [
+      1.065,
+      1.113
+    ],
+    "vol_history": [
+      2.095,
+      1.258
+    ],
+    "breakout_distance_pct": 0.52,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  },
+  "TKFEN": {
+    "symbol": "TKFEN",
+    "state": "RADAR",
+    "first_seen": "2026-03-13",
+    "state_since": "2026-03-13",
+    "days_in_state": 1,
+    "rs_history": [
+      1.115
+    ],
+    "vol_history": [
+      0.577
+    ],
+    "breakout_distance_pct": 6.24,
+    "sector_score": 49.5,
+    "edge_score": 0,
+    "note": ""
+  },
+  "BIOEN": {
+    "symbol": "BIOEN",
+    "state": "RADAR",
+    "first_seen": "2026-03-13",
+    "state_since": "2026-03-13",
+    "days_in_state": 1,
+    "rs_history": [
+      1.011
+    ],
+    "vol_history": [
+      2.149
+    ],
+    "breakout_distance_pct": 11.5,
+    "sector_score": 50.0,
+    "edge_score": 1,
+    "note": ""
+  }
+}
