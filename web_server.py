@@ -12,6 +12,7 @@
 import argparse
 import asyncio
 import logging
+import math
 import os
 import sys
 import threading
@@ -51,28 +52,38 @@ _state_lock = threading.Lock()
 _ws_clients: list[WebSocket] = []
 
 
+# ── Helpers ─────────────────────────────────────────────────
+def _f(v, decimals=2):
+    """Float'u güvenli şekilde yuvarlar, NaN/Inf → 0."""
+    try:
+        x = float(v)
+        return 0 if (math.isnan(x) or math.isinf(x)) else round(x, decimals)
+    except Exception:
+        return 0
+
+
 # ── Serializers ──────────────────────────────────────────────
 def _serialize_signal(rs) -> dict:
     c = rs.candidate
     r = rs.risk
-    change_pct = round((c.price - c.prev_price) / c.prev_price * 100, 2) if c.prev_price else 0
+    change_pct = _f((c.price - c.prev_price) / c.prev_price * 100) if c.prev_price else 0
     return {
         "symbol":    c.symbol,
-        "price":     round(c.price, 2),
+        "price":     _f(c.price),
         "change":    change_pct,
-        "rsi":       round(c.rsi, 1),
-        "ema9":      round(c.ema9, 2),
-        "ema21":     round(c.ema21, 2),
-        "atr":       round(c.atr, 3),
-        "momentum":  round(c.momentum, 2),
-        "score":     rs.combined_score,
-        "ai_score":  round(rs.ai_score, 1),
+        "rsi":       _f(c.rsi, 1),
+        "ema9":      _f(c.ema9),
+        "ema21":     _f(c.ema21),
+        "atr":       _f(c.atr, 3),
+        "momentum":  _f(c.momentum),
+        "score":     _f(rs.combined_score, 1),
+        "ai_score":  _f(rs.ai_score, 1),
         "quality":   rs.quality_label,
-        "trust":     round(rs.confidence * 100, 1),
-        "entry":     round(r.entry, 2),
-        "stop":      round(r.stop, 2),
-        "target":    round(r.target, 2),
-        "rr":        round(r.rr_ratio, 2),
+        "trust":     _f(rs.confidence * 100, 1),
+        "entry":     _f(r.entry),
+        "stop":      _f(r.stop),
+        "target":    _f(r.target),
+        "rr":        _f(r.rr_ratio),
         "action":    "AL",
         "setup":     rs.core_setup_type if rs.core_setup_type != "None" else "Sinyal",
         "strategy":  "BULL_BREAKOUT" if c.breakout else "TREND",
@@ -82,23 +93,23 @@ def _serialize_signal(rs) -> dict:
 
 
 def _serialize_candidate(c) -> dict:
-    change_pct = round((c.price - c.prev_price) / c.prev_price * 100, 2) if c.prev_price else 0
+    change_pct = _f((c.price - c.prev_price) / c.prev_price * 100) if c.prev_price else 0
     return {
         "symbol":   c.symbol,
-        "price":    round(c.price, 2),
+        "price":    _f(c.price),
         "change":   change_pct,
-        "rsi":      round(c.rsi, 1),
-        "ema9":     round(c.ema9, 2),
-        "ema21":    round(c.ema21, 2),
+        "rsi":      _f(c.rsi, 1),
+        "ema9":     _f(c.ema9),
+        "ema21":    _f(c.ema21),
         "score":    c.score,
         "action":   "IZLE",
         "quality":  "B",
         "trust":    60,
         "setup":    "İzle",
         "strategy": "RANGE",
-        "entry":    round(c.price, 2),
-        "stop":     round(c.price * 0.97, 2),
-        "target":   round(c.price * 1.04, 2),
+        "entry":    _f(c.price),
+        "stop":     _f(c.price * 0.97),
+        "target":   _f(c.price * 1.04),
         "rr":       1.5,
         "lot":      0,
         "alerts":   [],
