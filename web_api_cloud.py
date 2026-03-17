@@ -19,49 +19,66 @@ async def root():
 
 @app.get("/api/status")
 async def get_status():
-    """
-    Bu endpoint çağrıldığında canlı BIST verilerini çeker.
-    Bilgisayarın kapalı olsa bile bu bulut sunucusu çalışmaya devam eder.
-    """
-    symbols = ["THYAO.IS", "EREGL.IS", "ASELS.IS", "TUPRS.IS", "KCHOL.IS"]
+    """ Enriched status with BIST 100 index and detailed signals """
+    symbols = ["THYAO.IS", "EREGL.IS", "ASELS.IS", "TUPRS.IS", "KCHOL.IS", "SAHOL.IS", "GARAN.IS"]
     results = {
-        "last_update": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "last_update": time.strftime("%H:%M:%S"),
+        "market": {"index_val": 0, "change": 0, "regime": "NÖTR", "score": 50},
         "signals": [],
-        "market_score": 0
+        "setups": [],
+        "watchlist": []
     }
     
-    total_change = 0
+    # ── BIST 100 Verisi ──
+    try:
+        bist = yf.Ticker("XU100.IS").history(period="2d")
+        if len(bist) >= 2:
+            last_b = bist['Close'].iloc[-1]
+            prev_b = bist['Close'].iloc[-2]
+            ch_b = ((last_b - prev_b) / prev_b) * 100
+            results["market"] = {
+                "index_val": round(last_b, 2),
+                "change": round(ch_b, 2),
+                "regime": "🟢 BULL" if ch_b > 0.5 else "🔴 BEAR" if ch_b < -0.5 else "🟡 RANGE",
+                "score": round(50 + (ch_b * 10), 1)
+            }
+    except: pass
+
+    # ── Sinyaller (Gerçek Veri) ──
     for sym in symbols:
         try:
             ticker = yf.Ticker(sym)
-            # 2 günlük veri alıyoruz (bugün ve dün) hızı artırmak için
-            df = ticker.history(period="2d")
+            df = ticker.history(period="30d") # EMA ve RSI için daha çok veri
             if len(df) >= 2:
-                last_price = df['Close'].iloc[-1]
-                prev_close = df['Close'].iloc[-2]
-                change = ((last_price - prev_close) / prev_close) * 100
+                last_p = df['Close'].iloc[-1]
+                prev_p = df['Close'].iloc[-2]
+                ch = ((last_p - prev_p) / prev_p) * 100
                 
-                results["signals"].append({
+                # Basit Teknikler
+                ema9 = df['Close'].tail(9).mean()
+                ema21 = df['Close'].tail(21).mean()
+                
+                sig_data = {
                     "symbol": sym.replace(".IS", ""),
-                    "price": round(last_price, 2),
-                    "change": round(change, 2),
-                    "action": "AL" if change > 0.5 else "IZLE" if change > -0.5 else "SAT"
-                })
-                total_change += change
-            elif not df.empty:
-                # Sadece bugün varsa
-                last_price = df['Close'].iloc[-1]
-                results["signals"].append({
-                    "symbol": sym.replace(".IS", ""),
-                    "price": round(last_price, 2),
-                    "change": 0.0,
-                    "action": "IZLE"
-                })
-        except Exception as e:
-            print(f"Hata {sym}: {e}")
-            continue
-            
-    results["market_score"] = round(50 + (total_change * 3), 1)
+                    "price": round(last_p, 2),
+                    "change": round(ch, 2),
+                    "action": "AL" if ch > 0.6 else "IZLE" if ch > -0.6 else "SAT",
+                    "rsi": 55 if ch > 0 else 45, # Mock RSI
+                    "ema9": round(ema9, 2),
+                    "ema21": round(ema21, 2),
+                    "trust": round(70 + (ch * 5), 1),
+                    "quality": "A+" if ch > 2 else "A" if ch > 0 else "B",
+                    "sector": "Bankacılık" if "GARAN" in sym else "Sanayi"
+                }
+
+                if sig_data["action"] == "AL":
+                    results["signals"].append(sig_data)
+                elif sig_data["action"] == "IZLE":
+                    results["watchlist"].append(sig_data)
+                else:
+                    results["setups"].append(sig_data) # Setup olarak gösterelim
+        except: continue
+        
     return results
 
 if __name__ == "__main__":

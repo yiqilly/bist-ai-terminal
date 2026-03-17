@@ -3,276 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST Terminal | Profesyonel İşlem Masası</title>
+    <title>BIST Terminal | Web Cockpit v1</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0a0e14;
+            --panel-bg: #111827;
             --card-bg: #151c27;
             --accent: #00d2ff;
             --text: #e0e6ed;
-            --text-muted: #94a3b8;
-            --success: #10b981;
+            --text-dim: #94a3b8;
+            --success: #4ade80;
+            --warning: #fbbf24;
             --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.05);
+            --font-mono: 'Consolas', 'Courier New', monospace;
         }
 
+        * { box-sizing: border-box; }
         body {
             background-color: var(--bg);
             color: var(--text);
             font-family: 'Inter', sans-serif;
             margin: 0;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        header {
-            width: 100%;
-            padding: 40px 0;
-            text-align: center;
-            background: linear-gradient(180deg, rgba(0, 210, 255, 0.1) 0%, rgba(10, 14, 20, 0) 100%);
-        }
-
-        h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin: 0;
-            background: linear-gradient(90deg, #fff, var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 1.1rem;
-            margin-top: 10px;
-        }
-
-        .container {
-            max-width: 1000px;
-            width: 90%;
-            margin-top: 50px;
-        }
-
-        .glass-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            position: relative;
             overflow: hidden;
         }
 
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .stat-box {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-box:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent);
-        }
-
-        .tag {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            font-weight: 600;
-            color: var(--accent);
-            margin-bottom: 8px;
-            display: block;
-        }
-
-        .val {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .footer {
-            margin: 60px 0;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #000;
-            padding: 12px 30px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            display: inline-block;
-            margin-top: 30px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-            transform: scale(1.05);
-        }
-
-        /* Küçük Animasyon */
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-        .live-dot {
-            height: 8px;
-            width: 8px;
-            background-color: var(--success);
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        /* Yeni Eklenen Stiller */
-        .signal-list {
-            margin-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding-top: 20px;
-        }
-
-        .signal-row {
+        /* ── Top Bar ── */
+        header {
+            background: #0f172a;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 12px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
-        .badge {
-            padding: 4px 12px;
-            border-radius: 6px;
+        .logo { font-weight: 800; font-size: 1.1rem; color: var(--accent); letter-spacing: 1px; }
+
+        .market-meta { display: flex; gap: 20px; font-family: var(--font-mono); font-size: 0.85rem; }
+        .regime-tag { font-weight: bold; }
+
+        /* ── Main Layout ── */
+        .cockpit-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Left Side: Signals ── */
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: #0f172a;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: var(--font-mono);
             font-size: 0.8rem;
-            font-weight: 600;
+            color: var(--text-dim);
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
         }
 
-        .badge-primary { background: rgba(0, 210, 255, 0.2); color: var(--accent); }
-        .badge-secondary { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0, 210, 255, 0.05); }
+
+        .table-container { flex: 1; overflow-y: auto; background: var(--panel-bg); }
+
+        table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+        th { text-align: left; padding: 10px; background: #0f172a; position: sticky; top: 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        tr:hover { background: rgba(255, 255, 255, 0.03); cursor: pointer; }
+        tr.selected { background: rgba(0, 210, 255, 0.1); }
+
+        .badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
+        .q-aplus { color: var(--success); }
+        .q-a { color: #86efac; }
+        .q-b { color: var(--warning); }
+
+        /* ── Right Side: Details ── */
+        .details-panel {
+            background: var(--bg);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .detail-card {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .detail-header { border-bottom: 1px solid var(--border); margin-bottom: 15px; padding-bottom: 10px; }
+        .detail-header h3 { margin: 0; font-size: 1.2rem; display: flex; justify-content: space-between; }
+
+        .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: var(--font-mono); }
+        .metric { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
+        .metric b { color: var(--text); display: block; font-size: 1rem; }
+
+        .btn-refresh {
+            background: var(--accent); color: #000; border: none; padding: 8px 15px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem;
+        }
+
+        /* ── Utility ── */
+        .color-up { color: var(--success); }
+        .color-down { color: var(--danger); }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>BIST TERMINAL</h1>
-        <p class="subtitle">AI Destekli Borsa Analiz ve Sinyal Merkezi</p>
+        <div class="logo">◉ BIST COCKPIT</div>
+        <div class="market-meta">
+            <span id="market-idx">BIST 100: ---</span>
+            <span id="market-regime" class="regime-tag">---</span>
+            <span id="system-clock">00:00:00</span>
+        </div>
+        <button class="btn-refresh" onclick="updateCockpit()">YENİLE</button>
     </header>
 
-    <div class="container">
-        <div class="glass-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">Market Durumu</h2>
-                <span><span class="live-dot"></span>Canlı Veri Aktif</span>
+    <div class="cockpit-grid">
+        <!-- ── SOL: Sinyal Listesi ── -->
+        <div class="workspace">
+            <div class="tabs-header">
+                <div class="tab-btn active" onclick="switchTab('signals', this)">🚀 AL SİNYALLERİ</div>
+                <div class="tab-btn" onclick="switchTab('setups', this)">⏳ SETUP</div>
+                <div class="tab-btn" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
             </div>
-            
-            <div class="grid">
-                <div class="stat-box">
-                    <span class="tag">BIST 100</span>
-                    <div class="val" id="bist-val">Yükleniyor...</div>
+
+            <div class="table-container">
+                <table id="signals-table">
+                    <thead>
+                        <tr>
+                            <th>HISSE</th>
+                            <th>FIYAT</th>
+                            <th>DEGISIM</th>
+                            <th>TRUST</th>
+                            <th>SEKTOR</th>
+                            <th>AL/SAT</th>
+                            <th>QL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cockpit-body">
+                        <!-- Veriler buraya dolacak -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── SAĞ: Detay Paneli ── -->
+        <div class="details-panel" id="details-view">
+            <div class="detail-card">
+                <div class="detail-header">
+                    <h3 id="det-symbol">SEMBOL<span>₺0.00</span></h3>
+                    <p id="det-change" style="margin:5px 0 0 0; font-size:0.9rem;">--%</p>
                 </div>
-                <div class="stat-box">
-                    <span class="tag">Aktif Sinyaller</span>
-                    <div class="val" id="signal-count">-</div>
-                </div>
-                <div class="stat-box">
-                    <span class="tag">AI Güven Skoru</span>
-                    <div class="val" id="ai-score">-</div>
+                <div class="metric-grid" id="det-metrics">
+                    <div class="metric">RSI <b>--</b></div>
+                    <div class="metric">GÜVEN <b>--</b></div>
+                    <div class="metric">EMA 9 <b>--</b></div>
+                    <div class="metric">EMA 21 <b>--</b></div>
                 </div>
             </div>
 
-            <div class="signal-list">
-                <!-- Sinyaller buraya dinamik dolacak -->
-                <p style="text-align: center; color: var(--text-muted);">Sinyaller yükleniyor...</p>
-            </div>
-
-            <div style="text-align: center;">
-                <a href="#" class="btn-primary" id="refresh-btn" onclick="loadSignals(event)">Sinyalleri Manuel Yenile</a>
+            <div class="detail-card">
+                <h4 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-dim)">YAPAY ZEKA ANALİZİ</h4>
+                <p id="det-reason" style="font-size:0.85rem; line-height:1.4; font-family:var(--font-mono)">Bir sembol seçiniz...</p>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        &copy; 2026 BIST Terminal | <span id="last-update">Veriler bekleniyor...</span>
-    </div>
-
     <script>
-        async function updateDashboard() {
+        let currentData = null;
+        let activeTab = 'signals';
+
+        async function updateCockpit() {
             const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
-            const btn = document.getElementById('refresh-btn');
-            
             try {
-                btn.innerText = "Güncelleniyor...";
                 const res = await fetch(api_url);
-                const data = await res.json();
+                currentData = await res.json();
                 
-                // Üst Kartları Güncelle
-                document.getElementById('bist-val').innerHTML = `9,145.20 <span style="color: var(--success); font-size: 0.9rem;">+1.2%</span>`;
-                document.getElementById('signal-count').innerText = data.signals.length + " Aktif";
-                document.getElementById('ai-score').innerText = data.market_score + " / 100";
+                // Top Bar
+                document.getElementById('market-idx').innerText = `BIST 100: ${currentData.market.index_val} (${currentData.market.change}%)`;
+                document.getElementById('market-regime').innerText = currentData.market.regime;
+                document.getElementById('market-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : '#ef4444';
                 
-                // Alt Başlık Güncelle
-                document.getElementById('last-update').innerText = "Son Güncelleme: " + data.last_update;
-                
-                // Sinyal Listesini Oluştur
-                const signalList = document.querySelector('.signal-list');
-                signalList.innerHTML = ''; 
-                
-                data.signals.forEach(sig => {
-                    const row = document.createElement('div');
-                    row.className = 'signal-row';
-                    row.innerHTML = `
-                        <span style="font-weight:600">${sig.symbol}</span>
-                        <span>${sig.price} TL</span>
-                        <span style="color: ${sig.change >= 0 ? '#00ff88' : '#ff4444'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</span>
-                        <span class="badge ${sig.action === 'AL' ? 'badge-primary' : 'badge-secondary'}">${sig.action}</span>
-                    `;
-                    signalList.appendChild(row);
-                });
-                
-            } catch (err) {
-                console.error("Veri okuma hatası:", err);
-                document.getElementById('last-update').innerText = "Bağlantı Hatası!";
-            } finally {
-                btn.innerText = "Sinyalleri Manuel Yenile";
-            }
+                renderTable();
+            } catch (err) { console.error("API Hatası:", err); }
         }
 
-        function loadSignals(e) {
-            if(e) e.preventDefault();
-            updateDashboard();
+        function switchTab(tab, el) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderTable();
         }
 
-        // Dakikada bir kontrol et
-        setInterval(updateDashboard, 60000);
-        updateDashboard();
+        function renderTable() {
+            if(!currentData) return;
+            const body = document.getElementById('cockpit-body');
+            body.innerHTML = '';
+            
+            const list = currentData[activeTab] || [];
+            list.forEach(sig => {
+                const tr = document.createElement('tr');
+                tr.onclick = () => selectSymbol(sig, tr);
+                tr.innerHTML = `
+                    <td style="font-weight:bold">${sig.symbol}</td>
+                    <td>₺${sig.price}</td>
+                    <td class="${sig.change >= 0 ? 'color-up' : 'color-down'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</td>
+                    <td>%${sig.trust}</td>
+                    <td>${sig.sector}</td>
+                    <td><span class="badge ${sig.action == 'AL' ? 'q-aplus' : 'q-b'}">${sig.action}</span></td>
+                    <td><span class="q-${sig.quality.toLowerCase().replace('+','plus')}">${sig.quality}</span></td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function selectSymbol(sig, rowEl) {
+            document.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+            if(rowEl) rowEl.classList.add('selected');
+
+            document.getElementById('det-symbol').innerHTML = `${sig.symbol} <span>₺${sig.price}</span>`;
+            document.getElementById('det-change').innerText = `${sig.change >= 0 ? '+' : ''}${sig.change}%`;
+            document.getElementById('det-change').className = sig.change >= 0 ? 'color-up' : 'color-down';
+            
+            const metrics = document.getElementById('det-metrics');
+            metrics.innerHTML = `
+                <div class="metric">RSI <b>${sig.rsi}</b></div>
+                <div class="metric">GÜVEN <b>%${sig.trust}</b></div>
+                <div class="metric">EMA 9 <b>₺${sig.ema9}</b></div>
+                <div class="metric">EMA 21 <b>₺${sig.ema21}</b></div>
+            `;
+            
+            document.getElementById('det-reason').innerText = 
+                `${sig.symbol} için rejim ${currentData.market.regime}. ` +
+                `Trend kalitesi ${sig.quality}. RSI değeri ${sig.rsi} ile ${sig.action == 'AL' ? 'pozitif' : 'nötr'} bölgede. ` +
+                `Sektör: ${sig.sector}.`;
+        }
+
+        function updateClock() {
+            document.getElementById('system-clock').innerText = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        setInterval(updateCockpit, 30000);
+        updateCockpit();
     </script>
 </body>
 </html>
