@@ -397,7 +397,8 @@
             if (!currentData) return;
             // Header
             document.getElementById('h-idx').innerHTML = `BIST 100: <b class="${currentData.market.change >=0 ? 'color-up':'color-down'}">${currentData.market.index_val} (${currentData.market.change}%)</b>`;
-            document.getElementById('h-regime').innerText = '● ' + currentData.market.regime.split(' ')[1];
+            const regimeParts = currentData.market.regime.split(' ');
+            document.getElementById('h-regime').innerText = '● ' + (regimeParts[1] || regimeParts[0] || 'NÖTR');
             document.getElementById('h-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#f87171' : '#fbbf24');
 
             // Stats

@@ -183,7 +183,7 @@ def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, sou
 
             for rs in ranked[:20]:
                 s = _serialize_signal(rs)
-                if rs.quality_label in ("A+", "A"):
+                if rs.quality_label in ("A+", "A") or rs.combined_score >= 3:
                     signals_out.append(s)
                     opportunities_out.append(s)
                 else:
