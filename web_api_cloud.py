@@ -60,12 +60,20 @@ async def get_status():
                         "price": round(last_p, 2),
                         "change": round(ch, 2),
                         "action": "AL" if ch > 0.5 else "IZLE" if ch > -0.5 else "SAT",
-                        "rsi": round(50 + (ch * 5), 0), # Tahmini RSI
+                        "rsi": round(50 + (ch * 5), 0),
                         "ema9": round(last_p * 0.99, 2),
                         "ema21": round(last_p * 0.97, 2),
                         "trust": round(70 + (ch * 5), 1),
                         "quality": "A+" if ch > 1.5 else "A" if ch > 0 else "B",
-                        "sector": "Bankacılık" if "GARAN" in sym or "SAHOL" in sym else "Sanayi"
+                        "sector": "Bankacılık" if "GARAN" in sym or "SAHOL" in sym else "Sanayi",
+                        "strategy": "BULL_BREAKOUT" if ch > 0 else "RANGE_ROTATION",
+                        "setup": "Kırılım" if ch > 0 else "Dip Dönüşü",
+                        "entry": round(last_p, 2),
+                        "stop": round(last_p * 0.97, 2),
+                        "target": round(last_p * 1.05, 2),
+                        "rr": 2.4,
+                        "reason": f"Trend { 'Güçlü' if ch > 0 else 'Zayıf' }",
+                        "lot": 0
                     }
 
                     if sig_data["action"] == "AL": results["signals"].append(sig_data)

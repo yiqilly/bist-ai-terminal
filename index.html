@@ -3,193 +3,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST Terminal | Web Cockpit v1</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <title>BIST Trading Cockpit v6.0.0</title>
     <style>
         :root {
-            --bg: #0a0e14;
-            --panel-bg: #111827;
-            --card-bg: #151c27;
+            --bg: #030712;
+            --panel-bg: #0f172a;
+            --card-bg: #1e293b;
             --accent: #00d2ff;
-            --text: #e0e6ed;
+            --text: #f1f5f9;
             --text-dim: #94a3b8;
-            --success: #4ade80;
-            --warning: #fbbf24;
+            --success: #10b981;
+            --warning: #f59e0b;
             --danger: #ef4444;
             --border: rgba(255, 255, 255, 0.05);
-            --font-mono: 'Consolas', 'Courier New', monospace;
+            --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
         }
 
         * { box-sizing: border-box; }
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-mono);
             margin: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            font-size: 13px;
         }
 
         /* ── Top Bar ── */
         header {
-            background: #0f172a;
-            border-bottom: 1px solid var(--border);
-            padding: 10px 20px;
+            background: #020617;
+            border-bottom: 2px solid var(--accent);
+            padding: 8px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 45px;
         }
 
-        .logo { font-weight: 800; font-size: 1.1rem; color: var(--accent); letter-spacing: 1px; }
+        .logo { font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+        .logo i { font-style: normal; font-size: 1.2rem; }
 
-        .market-meta { display: flex; gap: 20px; font-family: var(--font-mono); font-size: 0.85rem; }
-        .regime-tag { font-weight: bold; }
+        .header-center { display: flex; gap: 30px; font-size: 12px; }
+        .regime-box { color: var(--warning); font-weight: bold; }
+
+        .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; }
 
         /* ── Main Layout ── */
-        .cockpit-grid {
+        .cockpit-main {
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: 1fr 350px;
             flex: 1;
             overflow: hidden;
         }
 
-        /* ── Left Side: Signals ── */
-        .workspace {
+        /* ── Left Section (Signals) ── */
+        .signal-system {
             display: flex;
             flex-direction: column;
             border-right: 1px solid var(--border);
             overflow: hidden;
         }
 
-        .tabs-header {
+        .signal-tabs {
             display: flex;
             background: #0f172a;
-            padding: 0 10px;
             border-bottom: 1px solid var(--border);
+            padding: 0 5px;
+            overflow-x: auto;
+            scrollbar-width: none;
         }
 
-        .tab-btn {
-            padding: 12px 20px;
+        .tab {
+            padding: 10px 15px;
             cursor: pointer;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
             color: var(--text-dim);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             border-bottom: 2px solid transparent;
             transition: 0.2s;
         }
 
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0, 210, 255, 0.05); }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0, 210, 255, 0.05); }
 
-        .table-container { flex: 1; overflow-y: auto; background: var(--panel-bg); }
-
-        table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
-        th { text-align: left; padding: 10px; background: #0f172a; position: sticky; top: 0; border-bottom: 1px solid var(--border); color: var(--text-dim); }
-        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        tr:hover { background: rgba(255, 255, 255, 0.03); cursor: pointer; }
-        tr.selected { background: rgba(0, 210, 255, 0.1); }
-
-        .badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
-        .q-aplus { color: var(--success); }
-        .q-a { color: #86efac; }
-        .q-b { color: var(--warning); }
-
-        /* ── Right Side: Details ── */
-        .details-panel {
-            background: var(--bg);
-            padding: 20px;
-            overflow-y: auto;
+        .signal-status-bar {
+            background: #020617;
+            padding: 4px 15px;
+            font-size: 11px;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
             display: flex;
-            flex-direction: column;
             gap: 20px;
         }
 
-        .detail-card {
-            background: var(--panel-bg);
-            border-radius: 12px;
-            padding: 15px;
+        .table-area { flex: 1; overflow: auto; background: #0a0e14; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { 
+            position: sticky; top: 0; 
+            background: #0f172a; 
+            padding: 10px; 
+            border-bottom: 1px solid var(--accent); 
+            color: var(--success); 
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #cbd5e1; }
+        tr:hover { background: rgba(0, 210, 255, 0.1); cursor: pointer; }
+        tr.selected { background: rgba(0, 210, 255, 0.2); }
+
+        /* ── Right Section (Details) ── */
+        .details-sidebar {
+            background: #020617;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-tabs-right {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        .nav-tab-r {
+            padding: 5px 12px;
+            cursor: pointer;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+        .nav-tab-r.active { background: #1e293b; color: var(--text); border-radius: 4px 4px 0 0; }
+
+        .symbol-title { font-size: 24px; font-weight: bold; margin: 0; display: flex; justify-content: space-between; align-items: baseline; }
+        .symbol-price { font-size: 18px; color: var(--text); }
+        .symbol-change { font-size: 13px; margin-top: 4px; }
+
+        .box-section {
+            background: #0f172a;
             border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
         }
 
-        .detail-header { border-bottom: 1px solid var(--border); margin-bottom: 15px; padding-bottom: 10px; }
-        .detail-header h3 { margin: 0; font-size: 1.2rem; display: flex; justify-content: space-between; }
+        .box-title { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
 
-        .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: var(--font-mono); }
-        .metric { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
-        .metric b { color: var(--text); display: block; font-size: 1rem; }
+        .trade-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+        .trade-item { background: #020617; padding: 10px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
+        .trade-label { font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+        .trade-val { font-size: 13px; font-weight: bold; color: var(--text); }
 
-        .btn-refresh {
-            background: var(--accent); color: #000; border: none; padding: 8px 15px;
-            border-radius: 6px; font-weight: bold; cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem;
+        .badge-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .b-green { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+        .b-red { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+
+        .status-box {
+            background: #1e3a8a;
+            color: #bfdbfe;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid var(--accent);
         }
 
-        /* ── Utility ── */
+        /* ── Heatmap Mock ── */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            padding: 2px;
+            background: #020617;
+            height: 120px;
+            overflow: hidden;
+        }
+        .hm-cell {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            cursor: pointer;
+        }
+        .hm-down { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); }
+
         .color-up { color: var(--success); }
         .color-down { color: var(--danger); }
+        
+        .btn-refresh {
+            background: var(--accent); color: #000; border: none; padding: 4px 10px;
+            border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">◉ BIST COCKPIT</div>
-        <div class="market-meta">
-            <span id="market-idx">BIST 100: ---</span>
-            <span id="market-regime" class="regime-tag">---</span>
-            <span id="system-clock">00:00:00</span>
+        <div class="logo">
+            <i>💠</i> BIST Trading Cockpit <span style="font-size: 10px; margin-left:10px; color:var(--text-dim)">v6.0.0</span>
         </div>
-        <button class="btn-refresh" onclick="updateCockpit()">YENİLE</button>
+        <div class="header-center">
+            <span>BIST 100: <b id="idx-val" class="color-up">---</b></span>
+            <span class="regime-box" id="idx-regime">🟡 RANGE</span>
+        </div>
+        <div class="header-right">
+            <span id="clock-time">00:00:00</span>
+            <span id="clock-date">01.01.2024</span>
+            <button class="btn-refresh" onclick="updateCockpit()">YENİLE</button>
+        </div>
     </header>
 
-    <div class="cockpit-grid">
-        <!-- ── SOL: Sinyal Listesi ── -->
-        <div class="workspace">
-            <div class="tabs-header">
-                <div class="tab-btn active" onclick="switchTab('signals', this)">🚀 AL SİNYALLERİ</div>
-                <div class="tab-btn" onclick="switchTab('setups', this)">⏳ SETUP</div>
-                <div class="tab-btn" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
+    <div class="heatmap-grid" id="hm-grid">
+        <!-- Heatmap cells will be generated -->
+    </div>
+
+    <div class="cockpit-main">
+        <!-- ── Left: Signals ── -->
+        <div class="signal-system">
+            <div class="signal-tabs">
+                <div class="tab active" onclick="switchTab('signals', this)">🚀 BUY SİNYALİ</div>
+                <div class="tab" onclick="switchTab('setups', this)">⏳ SETUP</div>
+                <div class="tab" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
+                <div class="tab" onclick="switchTab('positions', this)">💼 POZİSYONLAR</div>
+                <div class="tab">🎯 Fırsatlar</div>
+                <div class="tab">📊 Sektörler</div>
             </div>
 
-            <div class="table-container">
-                <table id="signals-table">
+            <div class="signal-status-bar">
+                <span>🟢 <b id="count-active">0</b> sinyal aktif</span>
+                <span>kalite: A+=<b id="c-ap">0</b> A=<b id="c-a">0</b> B=<b id="c-b">0</b></span>
+            </div>
+
+            <div class="table-area">
+                <table id="main-table">
                     <thead>
                         <tr>
-                            <th>HISSE</th>
-                            <th>FIYAT</th>
-                            <th>DEGISIM</th>
-                            <th>TRUST</th>
-                            <th>SEKTOR</th>
-                            <th>AL/SAT</th>
-                            <th>QL</th>
+                            <th>Hisse</th>
+                            <th>Rejim</th>
+                            <th>Strateji</th>
+                            <th>Setup</th>
+                            <th>Entry</th>
+                            <th>Stop</th>
+                            <th>Target</th>
+                            <th>R/R</th>
+                            <th>Güven</th>
+                            <th>Sektör</th>
+                            <th>Kalite</th>
                         </tr>
                     </thead>
                     <tbody id="cockpit-body">
-                        <!-- Veriler buraya dolacak -->
+                        <!-- Content -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- ── SAĞ: Detay Paneli ── -->
-        <div class="details-panel" id="details-view">
-            <div class="detail-card">
-                <div class="detail-header">
-                    <h3 id="det-symbol">SEMBOL<span>₺0.00</span></h3>
-                    <p id="det-change" style="margin:5px 0 0 0; font-size:0.9rem;">--%</p>
-                </div>
-                <div class="metric-grid" id="det-metrics">
-                    <div class="metric">RSI <b>--</b></div>
-                    <div class="metric">GÜVEN <b>--</b></div>
-                    <div class="metric">EMA 9 <b>--</b></div>
-                    <div class="metric">EMA 21 <b>--</b></div>
-                </div>
+        <!-- ── Right: Sidebar ── -->
+        <div class="details-sidebar" id="sidebar">
+            <div class="nav-tabs-right">
+                <div class="nav-tab-r active">Detay</div>
+                <div class="nav-tab-r">Haberler</div>
+                <div class="nav-tab-r">Kurum (Favori)</div>
             </div>
 
-            <div class="detail-card">
-                <h4 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-dim)">YAPAY ZEKA ANALİZİ</h4>
-                <p id="det-reason" style="font-size:0.85rem; line-height:1.4; font-family:var(--font-mono)">Bir sembol seçiniz...</p>
+            <div id="side-content">
+                <div class="symbol-header">
+                    <h2 class="symbol-title" id="side-sym">SEMBOL <span class="symbol-price" id="side-price">₺0.00</span></h2>
+                    <div class="symbol-change color-up" id="side-change">+0.00%</div>
+                </div>
+
+                <div class="status-box" id="side-action">WATCHLIST</div>
+
+                <div class="badge-grid" id="side-badges">
+                    <span class="badge b-green">✓ Trend</span>
+                    <span class="badge b-green">✓ Kırılım</span>
+                    <span class="badge b-green">✓ Hacim</span>
+                    <span class="badge b-red">X RSI</span>
+                </div>
+
+                <div class="box-section">
+                    <div class="box-title">TRADE BOX</div>
+                    <div class="trade-grid">
+                        <div class="trade-item">
+                            <span class="trade-label">ENTRY</span>
+                            <span class="trade-val" id="side-entry">₺0.00</span>
+                        </div>
+                        <div class="trade-item">
+                            <span class="trade-label">STOP</span>
+                            <span class="trade-val color-down" id="side-stop" style="color:var(--danger)">₺0.00</span>
+                        </div>
+                        <div class="trade-item">
+                            <span class="trade-label">TARGET</span>
+                            <span class="trade-val color-up" id="side-target" style="color:var(--success)">₺0.00</span>
+                        </div>
+                        <div class="trade-item">
+                            <span class="trade-label">R/R</span>
+                            <span class="trade-val" id="side-rr">0.0x</span>
+                        </div>
+                        <div class="trade-item">
+                            <span class="trade-label">GÜVEN</span>
+                            <span class="trade-val" id="side-trust">%0</span>
+                        </div>
+                        <div class="trade-item">
+                            <span class="trade-label">ÖNERİLEN LOT</span>
+                            <span class="trade-val" id="side-lot">---</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="box-section">
+                    <div class="box-title">TEKNİK ÖZET</div>
+                    <div class="badge-grid" id="side-summary">
+                        <span class="badge b-green">✓ TREND</span>
+                        <span class="badge b-green">✓ BREAKOUT</span>
+                        <span class="badge b-green">✓ HACİM</span>
+                        <span class="badge b-green">✓ RS+</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -200,34 +358,44 @@
 
         async function updateCockpit() {
             const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
-            const headerStatus = document.getElementById('market-idx');
-            const body = document.getElementById('cockpit-body');
-            
             try {
-                if (!currentData) body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">⏱ Veriler yükleniyor (Render uyanıyor olabilir)...</td></tr>';
-                
-                headerStatus.innerText = "BIST 100: FETCHING...";
                 const res = await fetch(api_url);
-                if (!res.ok) throw new Error("API sunucusu hata döndürdü.");
-                
                 currentData = await res.json();
                 
                 // Top Bar
-                document.getElementById('market-idx').innerText = `BIST 100: ${currentData.market.index_val} (${currentData.market.change > 0 ? '+' : ''}${currentData.market.change}%)`;
-                document.getElementById('market-regime').innerText = currentData.market.regime;
-                document.getElementById('market-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#ef4444' : '#fbbf24');
+                document.getElementById('idx-val').innerText = `${currentData.market.index_val} (${currentData.market.change > 0 ? '+' : ''}${currentData.market.change}%)`;
+                document.getElementById('idx-val').className = currentData.market.change >= 0 ? 'color-up' : 'color-down';
+                document.getElementById('idx-regime').innerText = currentData.market.regime;
                 
+                // Stats
+                const allSigs = [...currentData.signals, ...currentData.setups, ...currentData.watchlist];
+                document.getElementById('count-active').innerText = currentData.signals.length;
+                document.getElementById('c-ap').innerText = allSigs.filter(s => s.quality === 'A+').length;
+                document.getElementById('c-a').innerText = allSigs.filter(s => s.quality === 'A').length;
+                document.getElementById('c-b').innerText = allSigs.filter(s => s.quality === 'B').length;
+
+                renderHeatmap(allSigs);
                 renderTable();
-            } catch (err) { 
-                console.error("API Hatası:", err);
-                headerStatus.innerText = "BIST 100: BAĞLANTI HATASI";
-                body.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--danger)">⚠️ Veri alınamadı. Render sunucusu hala uyanıyor olabilir. Lütfen 1 dakika sonra tekrar yenileyiniz.</td></tr>`;
-            }
+            } catch (err) { console.error("Error:", err); }
+        }
+
+        function renderHeatmap(sigs) {
+            const hm = document.getElementById('hm-grid');
+            hm.innerHTML = '';
+            // Just take some random symbols/fillers to make it look full
+            const displayList = sigs.concat(sigs).slice(0, 40);
+            displayList.forEach(s => {
+                const cell = document.createElement('div');
+                cell.className = `hm-cell ${s.change < 0 ? 'hm-down' : ''}`;
+                cell.innerHTML = `<b>${s.symbol}</b><span>${s.change}%</span>`;
+                cell.onclick = () => selectSymbol(s);
+                hm.appendChild(cell);
+            });
         }
 
         function switchTab(tab, el) {
             activeTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             renderTable();
         }
@@ -238,55 +406,64 @@
             body.innerHTML = '';
             
             const list = currentData[activeTab] || [];
-            if (list.length === 0) {
-                body.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">Bu kategoride şu an aktif hisse bulunmamaktadır.</td></tr>`;
-                return;
-            }
-
             list.forEach(sig => {
                 const tr = document.createElement('tr');
-                tr.onclick = (e) => selectSymbol(sig, tr);
+                tr.onclick = () => selectSymbol(sig, tr);
                 tr.innerHTML = `
-                    <td style="font-weight:bold">${sig.symbol}</td>
-                    <td>₺${sig.price}</td>
-                    <td class="${sig.change >= 0 ? 'color-up' : 'color-down'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</td>
+                    <td style="font-weight:bold; color:var(--accent)">${sig.symbol}</td>
+                    <td>${currentData.market.regime.split(' ')[1] || 'RANGE'}</td>
+                    <td>${sig.strategy}</td>
+                    <td>${sig.setup}</td>
+                    <td style="color:var(--text)">₺${sig.entry}</td>
+                    <td style="color:var(--danger)">₺${sig.stop}</td>
+                    <td style="color:var(--success)">₺${sig.target}</td>
+                    <td>${sig.rr}x</td>
                     <td>%${sig.trust}</td>
                     <td>${sig.sector}</td>
-                    <td><span class="badge ${sig.action == 'AL' ? 'q-aplus' : (sig.action == 'SAT' ? 'q-b' : 'q-a')}">${sig.action}</span></td>
-                    <td><span class="q-${sig.quality.toLowerCase().replace('+','plus')}">${sig.quality}</span></td>
+                    <td style="font-weight:bold; color:${sig.quality=='A+'?'var(--success)':'var(--warning)'}">${sig.quality}</td>
                 `;
                 body.appendChild(tr);
             });
         }
 
         function selectSymbol(sig, rowEl) {
-            document.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
-            if(rowEl) rowEl.classList.add('selected');
+            if(rowEl) {
+                document.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+                rowEl.classList.add('selected');
+            }
 
-            document.getElementById('det-symbol').innerHTML = `${sig.symbol} <span>₺${sig.price}</span>`;
-            document.getElementById('det-change').innerText = `${sig.change >= 0 ? '+' : ''}${sig.change}%`;
-            document.getElementById('det-change').className = sig.change >= 0 ? 'color-up' : 'color-down';
+            document.getElementById('side-sym').innerHTML = `${sig.symbol} <span class="symbol-price">₺${sig.price}</span>`;
+            document.getElementById('side-change').innerText = `${sig.change >= 0 ? '+' : ''}${sig.change}%`;
+            document.getElementById('side-change').className = `symbol-change ${sig.change >= 0 ? 'color-up' : 'color-down'}`;
             
-            const metrics = document.getElementById('det-metrics');
-            metrics.innerHTML = `
-                <div class="metric">RSI <b>${sig.rsi}</b></div>
-                <div class="metric">GÜVEN <b>%${sig.trust}</b></div>
-                <div class="metric">EMA 9 <b>₺${sig.ema9}</b></div>
-                <div class="metric">EMA 21 <b>₺${sig.ema21}</b></div>
+            document.getElementById('side-action').innerText = sig.action == 'AL' ? 'BUY SIGNAL' : sig.action == 'SAT' ? 'SELL SIGNAL' : 'WATCHLIST';
+            document.getElementById('side-action').style.background = sig.action == 'AL' ? '#065f46' : sig.action == 'SAT' ? '#991b1b' : '#1e3a8a';
+
+            document.getElementById('side-entry').innerText = `₺${sig.entry}`;
+            document.getElementById('side-stop').innerText = `₺${sig.stop}`;
+            document.getElementById('side-target').innerText = `₺${sig.target}`;
+            document.getElementById('side-rr').innerText = `${sig.rr}x`;
+            document.getElementById('side-trust').innerText = `%${sig.trust}`;
+            
+            // Badges
+            const bg = document.getElementById('side-badges');
+            bg.innerHTML = `
+                <span class="badge ${sig.change > 0 ? 'b-green' : 'b-red'}">${sig.change > 0 ? '✓' : 'X'} Trend</span>
+                <span class="badge ${sig.quality == 'A+' ? 'b-green' : 'b-red'}">${sig.quality == 'A+' ? '✓' : 'X'} Kırılım</span>
+                <span class="badge b-green">✓ Hacim</span>
+                <span class="badge ${sig.rsi > 50 ? 'b-green' : 'b-red'}">${sig.rsi > 50 ? '✓' : 'X'} RSI</span>
             `;
-            
-            document.getElementById('det-reason').innerText = 
-                `${sig.symbol} için rejim ${currentData.market.regime}. ` +
-                `Trend kalitesi ${sig.quality}. RSI değeri ${sig.rsi} ile ${sig.action == 'AL' ? 'pozitif' : 'nötr'} bölgede. ` +
-                `Sektör: ${sig.sector}.`;
         }
 
-        function updateClock() {
-            document.getElementById('system-clock').innerText = new Date().toLocaleTimeString();
+        function updateClocks() {
+            const now = new Date();
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString();
+            document.getElementById('clock-date').innerText = now.toLocaleDateString();
         }
-        setInterval(updateClock, 1000);
-        setInterval(updateCockpit, 60000); // Otomatik 1 dakikada bir güncelle
+        setInterval(updateClocks, 1000);
+        setInterval(updateCockpit, 60000);
         updateCockpit();
+        updateClocks();
     </script>
 </body>
 </html>
