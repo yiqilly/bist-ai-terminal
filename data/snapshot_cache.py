@@ -1,13 +1,10 @@
 # ============================================================
-# data/snapshot_cache.py — v2
+# data/snapshot_cache.py — v3
 # Merkezi Snapshot Cache
 #
 # DEĞİŞİKLİKLER:
-#   - change_pct hesabı güvenli hale getirildi
-#   - prev_close doğrulama + çoklu fallback
-#   - MarketTick'e change_pct alanı eklendi (to_tick_with_change)
-#   - Aşırı change_pct değerleri sınırlandı (±30%)
-#   - Sembol normalize (BIST: prefix strip)
+#   - İndikatör hesaplamaları IndicatorEngine'e taşındı (Circular dep fix)
+#   - EMA, RSI, ATR optimizasyonu
 # ============================================================
 from __future__ import annotations
 
@@ -19,6 +16,7 @@ from datetime import datetime
 from typing import Optional
 
 from data.models import MarketTick, BarData, MarketSnapshot
+from strategy.indicator_engine import IndicatorEngine
 
 
 # ── Güvenli change_pct hesabı ────────────────────────────────
@@ -52,7 +50,8 @@ def _safe_change_pct(last: float, prev_close: float) -> Optional[float]:
     if abs(pct) > _MAX_CHANGE_PCT:
         return None
 
-    return round(pct, 3)
+    # Manual round 3 digits to avoid linter ndigits=None error
+    return float(int(pct * 1000) / 1000.0)
 
 
 # ── Sembol Normalize ─────────────────────────────────────────
@@ -106,7 +105,10 @@ class SymbolCache:
 
     @property
     def spread(self) -> float:
-        return round(self.ask - self.bid, 4) if self.ask and self.bid else 0.0
+        if not self.ask or not self.bid:
+            return 0.0
+        diff = float(self.ask) - float(self.bid)
+        return float(int(diff * 10000) / 10000.0)
 
 
 # ── SnapshotCache ─────────────────────────────────────────────
@@ -276,7 +278,9 @@ class SnapshotCache:
         with self._lock:
             ticks:    dict[str, MarketTick] = {}
             bars:     dict[str, BarData]    = {}
-            advancing = declining = unchanged = 0
+            advancing: int = 0
+            declining: int = 0
+            unchanged: int = 0
 
             for sym, sc in self._data.items():
                 if sc.last <= 0 or not sc.updated_at:
@@ -286,9 +290,12 @@ class SnapshotCache:
                 ticks[sym] = tick
 
                 # Yükseliş/Düşüş (change_pct'ye göre)
-                if sc.change_pct > 0.05:    advancing += 1
-                elif sc.change_pct < -0.05: declining += 1
-                else:                        unchanged += 1
+                if sc.change_pct > 0.05:
+                    advancing = advancing + 1
+                elif sc.change_pct < -0.05:
+                    declining = declining + 1
+                else:
+                    unchanged = unchanged + 1
 
                 bar = sc.latest_bar("1m") or sc.latest_bar("5m")
                 if bar:
@@ -321,7 +328,9 @@ class SnapshotCache:
             sc = self._data.get(sym)
             if not sc:
                 return []
-            return list(sc.bars.get(tf, []))[-n:]
+            # deque to list for safe indexing
+            bar_list = list(sc.bars.get(tf, []))
+            return bar_list[-n:]
 
     def all_symbols(self) -> list[str]:
         with self._lock:
@@ -336,24 +345,23 @@ class SnapshotCache:
     # ── İndikatör Hesaplama ──────────────────────────────────
 
     def compute_ema(self, symbol: str, period: int, tf: str = "1m") -> float:
-        bars = self.get_bars(symbol, tf, n=period * 3)
-        if not bars:
-            return 0.0
-        return _ema([b.close for b in bars], period)
+        bars = self.get_bars(symbol, tf, n=period * 4)
+        if not bars: return 0.0
+        return IndicatorEngine.ema([b.close for b in bars], period)
 
     def compute_rsi(self, symbol: str, period: int = 14, tf: str = "1m") -> float:
-        bars = self.get_bars(symbol, tf, n=period * 2 + 1)
+        bars = self.get_bars(symbol, tf, n=period * 3)
         if len(bars) < period + 1:
             sc = self.get_symbol(symbol)
-            return 50.0 if not sc else _rsi_from_change(sc.change_pct)
-        return _rsi([b.close for b in bars], period)
+            return 50.0 if not sc else round(max(0.0, min(100.0, 50 + sc.change_pct * 3)), 1)
+        return IndicatorEngine.rsi([b.close for b in bars], period)
 
     def compute_atr(self, symbol: str, period: int = 14, tf: str = "1m") -> float:
-        bars = self.get_bars(symbol, tf, n=period + 1)
+        bars = self.get_bars(symbol, tf, n=period * 2)
         if not bars:
             sc = self.get_symbol(symbol)
-            return sc.last * 0.01 if sc else 1.0
-        return _atr(bars, period)
+            return sc.last * 0.012 if sc else 1.0
+        return IndicatorEngine.atr([b.high for b in bars], [b.low for b in bars], [b.close for b in bars], period)
 
     def compute_momentum(self, symbol: str, period: int = 10, tf: str = "1m") -> float:
         bars = self.get_bars(symbol, tf, n=period + 1)
@@ -373,58 +381,3 @@ class SnapshotCache:
         }
 
 
-# ── Teknik İndikatör Fonksiyonları ──────────────────────────
-
-def _ema(closes: list[float], period: int) -> float:
-    if not closes or period <= 0:
-        return 0.0
-    k   = 2.0 / (period + 1)
-    ema = closes[0]
-    for c in closes[1:]:
-        ema = c * k + ema * (1 - k)
-    return round(ema, 2)
-
-
-def _rsi(closes: list[float], period: int = 14) -> float:
-    if len(closes) < period + 1:
-        return 50.0
-    gains = losses = 0.0
-    for i in range(1, period + 1):
-        d = closes[i] - closes[i - 1]
-        if d > 0: gains  += d
-        else:     losses -= d
-    avg_gain = gains  / period
-    avg_loss = losses / period
-    if avg_loss == 0:
-        return 100.0
-    rs  = avg_gain / avg_loss
-    rsi = 100 - 100 / (1 + rs)
-    for i in range(period + 1, len(closes)):
-        d = closes[i] - closes[i - 1]
-        g = max(d, 0); l = max(-d, 0)
-        avg_gain = (avg_gain * (period - 1) + g) / period
-        avg_loss = (avg_loss * (period - 1) + l) / period
-        rs  = avg_gain / avg_loss if avg_loss else float("inf")
-        rsi = 100 - 100 / (1 + rs)
-    return round(rsi, 1)
-
-
-def _rsi_from_change(change_pct: float) -> float:
-    return round(max(0.0, min(100.0, 50 + change_pct * 3)), 1)
-
-
-def _atr(bars: list[BarData], period: int = 14) -> float:
-    if len(bars) < 2:
-        return bars[0].high - bars[0].low if bars else 1.0
-    trs = []
-    for i in range(1, len(bars)):
-        h  = bars[i].high
-        l  = bars[i].low
-        pc = bars[i - 1].close
-        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
-    if not trs:
-        return 1.0
-    atr = sum(trs[:period]) / min(len(trs), period)
-    for tr in trs[period:]:
-        atr = (atr * (period - 1) + tr) / period
-    return round(atr, 3)

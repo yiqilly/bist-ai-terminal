@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST Trading Cockpit v6.0.1</title>
+    <title>BIST Trading Cockpit v6.1.0</title>
     <style>
         :root {
             --bg: #030712;
-            --panel-bg: #0f172a;
-            --card-bg: #1e293b;
+            --panel-bg: #080c14;
+            --card-bg: #0f172a;
             --accent: #00d2ff;
-            --text: #f1f5f9;
-            --text-dim: #94a3b8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --border: rgba(255, 255, 255, 0.05);
+            --accent-dim: rgba(0, 210, 255, 0.3);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --success: #4ade80;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --border: #1e293b;
             --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
         }
 
@@ -29,241 +30,255 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            font-size: 13px;
+            font-size: 12px;
         }
 
-        /* ── Top Bar ── */
+        /* ── Header v6 ── */
         header {
             background: #020617;
             border-bottom: 2px solid var(--accent);
-            padding: 8px 15px;
+            padding: 0 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 45px;
+            height: 40px;
         }
 
-        .logo { font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-        .logo i { font-style: normal; font-size: 1.2rem; }
+        .header-left { display: flex; align-items: center; gap: 10px; color: var(--accent); font-weight: bold; }
+        .header-center { display: flex; align-items: center; gap: 40px; font-weight: bold; }
+        .header-right { display: flex; align-items: center; gap: 20px; font-size: 11px; }
 
-        .header-center { display: flex; gap: 30px; font-size: 12px; }
-        .regime-box { color: var(--warning); font-weight: bold; }
+        .btn-refresh {
+            background: var(--accent); color: #000; border: none; padding: 4px 12px;
+            border-radius: 2px; cursor: pointer; font-weight: bold; font-size: 11px;
+        }
 
-        .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; }
-
-        /* ── Main Layout ── */
-        .cockpit-main {
+        /* ── Heatmap (Top Strip) ── */
+        .heatmap-container {
+            height: 140px;
+            background: #010409;
+            border-bottom: 1px solid var(--border);
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 1px;
+            padding: 1px;
+        }
+        .hm-cell {
+            background: #0d1117;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .hm-cell:hover { transform: scale(0.98); background: #161b22; }
+        .hm-cell b { font-size: 10px; color: var(--accent); }
+        .hm-cell span { font-size: 10px; }
+        .hm-cell small { font-size: 8px; color: var(--text-dim); }
+
+        .hm-up { border-color: rgba(74, 222, 128, 0.3); }
+        .hm-down { border-color: rgba(248, 113, 113, 0.3); }
+
+        /* ── Main Workspace ── */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 320px;
             flex: 1;
             overflow: hidden;
         }
 
-        /* ── Left Section (Signals) ── */
-        .signal-system {
+        /* ── Bottom Section Layout ── */
+        .signals-area {
             display: flex;
             flex-direction: column;
             border-right: 1px solid var(--border);
             overflow: hidden;
         }
 
-        .signal-tabs {
-            display: flex;
+        .signal-nav {
             background: #0f172a;
+            display: flex;
             border-bottom: 1px solid var(--border);
-            padding: 0 5px;
-            overflow-x: auto;
-            scrollbar-width: none;
+            height: 32px;
         }
-
-        .tab {
-            padding: 10px 15px;
-            cursor: pointer;
-            color: var(--text-dim);
-            white-space: nowrap;
+        .nav-item {
+            padding: 0 15px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            border-bottom: 2px solid transparent;
-            transition: 0.2s;
-        }
-
-        .tab:hover { color: var(--text); }
-        .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0, 210, 255, 0.05); }
-
-        .signal-status-bar {
-            background: #020617;
-            padding: 4px 15px;
-            font-size: 11px;
-            color: var(--text-dim);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            gap: 20px;
-        }
-
-        .table-area { flex: 1; overflow: auto; background: #0a0e14; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { 
-            position: sticky; top: 0; 
-            background: #0f172a; 
-            padding: 10px; 
-            border-bottom: 1px solid var(--accent); 
-            color: var(--success); 
-            font-size: 11px;
-            text-transform: uppercase;
-        }
-        td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #cbd5e1; }
-        tr:hover { background: rgba(0, 210, 255, 0.1); cursor: pointer; }
-        tr.selected { background: rgba(0, 210, 255, 0.2); }
-
-        /* ── Right Section (Details) ── */
-        .details-sidebar {
-            background: #020617;
-            padding: 10px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .nav-tabs-right {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 10px;
-        }
-        .nav-tab-r {
-            padding: 5px 12px;
+            gap: 8px;
             cursor: pointer;
             color: var(--text-dim);
-            font-size: 12px;
+            font-size: 11px;
+            border-right: 1px solid var(--border);
+            transition: 0.2s;
         }
-        .nav-tab-r.active { background: #1e293b; color: var(--text); border-radius: 4px 4px 0 0; }
+        .nav-item:hover { color: var(--text); }
+        .nav-item.active { background: #1e293b; color: var(--accent); border-top: 2px solid var(--accent); }
 
-        .symbol-title { font-size: 24px; font-weight: bold; margin: 0; display: flex; justify-content: space-between; align-items: baseline; }
-        .symbol-price { font-size: 18px; color: var(--text); }
-        .symbol-change { font-size: 13px; margin-top: 4px; }
-
-        .box-section {
-            background: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-        }
-
-        .box-title { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
-
-        .trade-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            text-align: center;
-        }
-        .trade-item { background: #020617; padding: 10px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
-        .trade-label { font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 4px; }
-        .trade-val { font-size: 13px; font-weight: bold; color: var(--text); }
-
-        .badge-grid {
+        .sub-nav {
+            background: #020617;
+            padding: 5px 15px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 10px;
+            justify-content: space-between;
+            align-items: center;
+            height: 30px;
+            border-bottom: 1px solid var(--border);
         }
-        .badge {
-            padding: 3px 8px;
-            border-radius: 3px;
+        .sub-nav-left { color: var(--success); font-weight: bold; display: flex; align-items: center; gap: 10px; }
+
+        /* ── Table Styling ── */
+        .table-container { flex: 1; overflow-y: auto; background: #000; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: #020617;
+            color: var(--success);
+            text-align: left;
+            padding: 8px 10px;
             font-size: 10px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--success);
+        }
+        td { padding: 8px 10px; border-bottom: 1px solid #0d1117; color: #cbd5e1; }
+        tr:hover { background: rgba(0, 210, 255, 0.05); cursor: pointer; }
+        tr.selected { background: rgba(0, 210, 255, 0.15); border-left: 3px solid var(--accent); }
+
+        /* ── Right Detail Panel ── */
+        .detail-panel {
+            background: #020617;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .side-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+        .side-tab { padding: 5px 12px; cursor: pointer; color: var(--text-dim); border-radius: 4px 4px 0 0; }
+        .side-tab.active { background: #1e293b; color: var(--text); }
+
+        .sym-header { display: flex; justify-content: space-between; align-items: baseline; }
+        .sym-name { font-size: 20px; font-weight: bold; margin: 0; }
+        .sym-price { font-size: 16px; color: #fff; }
+        .sym-info { font-size: 11px; margin-top: 5px; }
+
+        .action-box {
+            background: #1e3a8a;
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 1px;
+            margin: 15px 0;
+            border-radius: 2px;
+            border: 1px solid var(--accent);
+        }
+
+        .check-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 15px; }
+        .badge {
+            padding: 3px 6px;
+            border-radius: 2px;
+            font-size: 9px;
             font-weight: bold;
             display: flex;
             align-items: center;
             gap: 4px;
         }
-        .b-green { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-        .b-red { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .b-on { background: #064e3b; color: #4ade80; border: 1px solid #059669; }
+        .b-off { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
 
-        .status-box {
-            background: #1e3a8a;
-            color: #bfdbfe;
+        /* ── Trade Box v6 ── */
+        .trade-box {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .box-title { font-size: 10px; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; }
+        .trade-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .trade-item { background: #020617; padding: 8px 4px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .t-label { font-size: 8px; color: var(--text-dim); display: block; margin-bottom: 3px; }
+        .t-val { font-size: 12px; font-weight: bold; }
+
+        /* ── Technical Summary ── */
+        .tech-summary {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        /* ── Full Grid Heatmap (Tab) ── */
+        .full-heatmap {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 20px;
+        }
+        .fh-cell {
+            background: #0f172a;
+            border: 1px solid var(--border);
             padding: 15px;
             text-align: center;
-            font-weight: bold;
-            font-size: 16px;
-            margin: 10px 0;
             border-radius: 4px;
-            border: 1px solid var(--accent);
-        }
-
-        /* ── Heatmap Mock ── */
-        .heatmap-grid {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 2px;
-            padding: 2px;
-            background: #020617;
-            height: 120px;
-            overflow: hidden;
-        }
-        .hm-cell {
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
             cursor: pointer;
+            transition: 0.2s;
         }
-        .hm-down { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); }
+        .fh-cell:hover { border-color: var(--accent); background: #1e293b; }
+        .fh-cell b { font-size: 14px; display: block; margin-bottom: 5px; color: var(--accent); }
+        .fh-cell span { font-size: 12px; font-weight: bold; }
 
         .color-up { color: var(--success); }
         .color-down { color: var(--danger); }
-        
-        .btn-refresh {
-            background: var(--accent); color: #000; border: none; padding: 4px 10px;
-            border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;
-        }
+        .quality-Aplus { color: var(--success); font-weight: bold; }
+        .quality-A { color: var(--warning); font-weight: bold; }
+        .quality-B { color: var(--text-dim); }
+
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">
-            <i>💠</i> BIST Trading Cockpit <span style="font-size: 10px; margin-left:10px; color:var(--text-dim)">v6.0.1</span>
-        </div>
+        <div class="header-left">💠 BIST Trading Cockpit <small>v6.1.0</small></div>
         <div class="header-center">
-            <span>BIST 100: <b id="idx-val" class="color-up">---</b></span>
-            <span class="regime-box" id="idx-regime">🟡 RANGE</span>
+            <span id="h-idx">BIST 100: <b class="color-up">---</b></span>
+            <span id="h-regime" style="color:var(--warning)">● RANGE</span>
         </div>
         <div class="header-right">
-            <span id="clock-time">00:00:00</span>
-            <span id="clock-date">01.01.2024</span>
+            <span id="h-clock">00:00:00</span>
+            <span id="h-date">01.01.2024</span>
             <button class="btn-refresh" onclick="updateCockpit()">YENİLE</button>
         </div>
     </header>
 
-    <div class="heatmap-grid" id="hm-grid">
-        <!-- Heatmap cells will be generated -->
+    <div class="heatmap-container" id="heatmap">
+        <!-- Cells generated by JS -->
     </div>
 
-    <div class="cockpit-main">
-        <!-- ── Left: Signals ── -->
-        <div class="signal-system">
-            <div class="signal-tabs">
-                <div class="tab active" onclick="switchTab('signals', this)">🚀 BUY SİNYALİ</div>
-                <div class="tab" onclick="switchTab('setups', this)">⏳ SETUP</div>
-                <div class="tab" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
-                <div class="tab" onclick="switchTab('positions', this)">💼 POZİSYONLAR</div>
-                <div class="tab" onclick="switchTab('opportunities', this)">🎯 Fırsatlar</div>
-                <div class="tab" onclick="switchTab('sectors', this)">📊 Sektörler</div>
+    <div class="workspace">
+        <div class="signals-area">
+            <div class="signal-nav">
+                <div class="nav-item active" onclick="switchTab('signals', this)">🔹 BUY SİNYALİ</div>
+                <div class="nav-item" onclick="switchTab('setups', this)">⏳ SETUP</div>
+                <div class="nav-item" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
+                <div class="nav-item" onclick="switchTab('heatmap', this)">🔥 ISI HARİTASI</div>
+                <div class="nav-item" onclick="switchTab('positions', this)">💼 POZİSYONLAR</div>
+                <div class="nav-item" onclick="switchTab('opportunities', this)">🎯 Fırsatlar</div>
+                <div class="nav-item" onclick="switchTab('sectors', this)">📊 Sektörler</div>
             </div>
-
-            <div class="signal-status-bar">
-                <span>🟢 <b id="count-active">0</b> sinyal aktif</span>
-                <span>kalite: A+=<b id="c-ap">0</b> A=<b id="c-a">0</b> B=<b id="c-b">0</b></span>
+            <div class="sub-nav">
+                <div class="sub-nav-left" id="tab-title">🚀 AL SİNYALLERİ</div>
+                <div style="font-size:10px; color:var(--text-dim)">
+                    kalite: A+:<b id="c-ap" style="color:#fff">0</b> A:<b id="c-a" style="color:#fff">0</b> B:<b id="c-b" style="color:#fff">0</b>
+                </div>
             </div>
-
-            <div class="table-area">
-                <table id="main-table">
+            <div class="table-container">
+                <table>
                     <thead>
                         <tr>
                             <th>Hisse</th>
@@ -280,72 +295,54 @@
                         </tr>
                     </thead>
                     <tbody id="cockpit-body">
-                        <!-- Content -->
+                        <!-- Rows -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- ── Right: Sidebar ── -->
-        <div class="details-sidebar" id="sidebar">
-            <div class="nav-tabs-right">
-                <div class="nav-tab-r active">Detay</div>
-                <div class="nav-tab-r">Haberler</div>
-                <div class="nav-tab-r">Kurum (Favori)</div>
+        <div class="detail-panel">
+            <div class="side-tabs">
+                <div class="side-tab active">Detay</div>
+                <div class="side-tab">Haberler</div>
+                <div class="side-tab">Aracı Kurum</div>
             </div>
 
-            <div id="side-content">
-                <div class="symbol-header">
-                    <h2 class="symbol-title" id="side-sym">SEMBOL <span class="symbol-price" id="side-price">₺0.00</span></h2>
-                    <div class="symbol-change color-up" id="side-change">+0.00%</div>
+            <div id="side-main">
+                <div class="sym-header">
+                    <h2 class="sym-name" id="s-name">SEMBOL</h2>
+                    <span class="sym-price" id="s-price">₺0.00</span>
+                </div>
+                <div class="sym-info"><span class="color-up" id="s-change">+0.00%</span> | <span id="s-trend">Strong Momentum</span></div>
+
+                <div class="action-box" id="s-box">WATCHLIST</div>
+
+                <div class="check-badges" id="s-badges">
+                    <span class="badge b-on">✓ Trend</span>
+                    <span class="badge b-on">✓ Kırılım</span>
+                    <span class="badge b-on">✓ Hacim</span>
+                    <span class="badge b-off">X RSI</span>
                 </div>
 
-                <div class="status-box" id="side-action">WATCHLIST</div>
-
-                <div class="badge-grid" id="side-badges">
-                    <span class="badge b-green">✓ Trend</span>
-                    <span class="badge b-green">✓ Kırılım</span>
-                    <span class="badge b-green">✓ Hacim</span>
-                    <span class="badge b-red">X RSI</span>
-                </div>
-
-                <div class="box-section">
+                <div class="trade-box">
                     <div class="box-title">TRADE BOX</div>
                     <div class="trade-grid">
-                        <div class="trade-item">
-                            <span class="trade-label">ENTRY</span>
-                            <span class="trade-val" id="side-entry">₺0.00</span>
-                        </div>
-                        <div class="trade-item">
-                            <span class="trade-label">STOP</span>
-                            <span class="trade-val color-down" id="side-stop" style="color:var(--danger)">₺0.00</span>
-                        </div>
-                        <div class="trade-item">
-                            <span class="trade-label">TARGET</span>
-                            <span class="trade-val color-up" id="side-target" style="color:var(--success)">₺0.00</span>
-                        </div>
-                        <div class="trade-item">
-                            <span class="trade-label">R/R</span>
-                            <span class="trade-val" id="side-rr">0.0x</span>
-                        </div>
-                        <div class="trade-item">
-                            <span class="trade-label">GÜVEN</span>
-                            <span class="trade-val" id="side-trust">%0</span>
-                        </div>
-                        <div class="trade-item">
-                            <span class="trade-label">ÖNERİLEN LOT</span>
-                            <span class="trade-val" id="side-lot">---</span>
-                        </div>
+                        <div class="trade-item"><span class="t-label">ENTRY</span><b class="t-val" id="t-entry">₺0.00</b></div>
+                        <div class="trade-item"><span class="t-label">STOP</span><b class="t-val color-down" id="t-stop">₺0.00</b></div>
+                        <div class="trade-item"><span class="t-label">TARGET</span><b class="t-val color-up" id="t-target">₺0.00</b></div>
+                        <div class="trade-item"><span class="t-label">R/R</span><b class="t-val" id="t-rr">2.4x</b></div>
+                        <div class="trade-item"><span class="t-label">GÜVEN</span><b class="t-val" id="t-trust">%70</b></div>
+                        <div class="trade-item"><span class="t-label">ÖNERİLEN LOT</span><b class="t-val" id="t-lot">---</b></div>
                     </div>
                 </div>
 
-                <div class="box-section">
+                <div class="tech-summary">
                     <div class="box-title">TEKNİK ÖZET</div>
-                    <div class="badge-grid" id="side-summary">
-                        <span class="badge b-green">✓ TREND</span>
-                        <span class="badge b-green">✓ BREAKOUT</span>
-                        <span class="badge b-green">✓ HACİM</span>
-                        <span class="badge b-green">✓ RS+</span>
+                    <div class="check-badges">
+                        <span class="badge b-on">✓ TREND</span>
+                        <span class="badge b-on">✓ BREAKOUT</span>
+                        <span class="badge b-on">✓ HACİM</span>
+                        <span class="badge b-on">✓ RS+</span>
                     </div>
                 </div>
             </div>
@@ -357,61 +354,83 @@
         let activeTab = 'signals';
 
         async function updateCockpit() {
-            const api_url = "https://bist-ai-terminal.onrender.com/api/status?v=" + new Date().getTime(); 
+            const api_url = "https://bist-ai-terminal.onrender.com/api/status?v=" + Date.now();
             try {
                 const res = await fetch(api_url);
                 currentData = await res.json();
                 
-                // Top Bar
-                document.getElementById('idx-val').innerText = `${currentData.market.index_val} (${currentData.market.change > 0 ? '+' : ''}${currentData.market.change}%)`;
-                document.getElementById('idx-val').className = currentData.market.change >= 0 ? 'color-up' : 'color-down';
-                document.getElementById('idx-regime').innerText = currentData.market.regime;
-                
-                // Stats
-                const allSigs = [...currentData.signals, ...currentData.setups, ...currentData.watchlist];
-                document.getElementById('count-active').innerText = currentData.signals.length;
-                document.getElementById('c-ap').innerText = allSigs.filter(s => s.quality === 'A+').length;
-                document.getElementById('c-a').innerText = allSigs.filter(s => s.quality === 'A').length;
-                document.getElementById('c-b').innerText = allSigs.filter(s => s.quality === 'B').length;
+                // Header
+                document.getElementById('h-idx').innerHTML = `BIST 100: <b class="${currentData.market.change >=0 ? 'color-up':'color-down'}">${currentData.market.index_val} (${currentData.market.change}%)</b>`;
+                document.getElementById('h-regime').innerText = '● ' + currentData.market.regime.split(' ')[1];
+                document.getElementById('h-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#f87171' : '#fbbf24');
 
-                renderHeatmap(allSigs);
+                // Stats
+                const all = [...currentData.signals, ...currentData.setups, ...currentData.watchlist];
+                document.getElementById('c-ap').innerText = all.filter(s => s.quality === 'A+').length;
+                document.getElementById('c-a').innerText = all.filter(s => s.quality === 'A').length;
+                document.getElementById('c-b').innerText = all.filter(s => s.quality === 'B').length;
+
+                renderHeatmap(all);
                 renderTable();
-            } catch (err) { console.error("Error:", err); }
+            } catch (err) { console.error("Update Error:", err); }
         }
 
         function renderHeatmap(sigs) {
-            const hm = document.getElementById('hm-grid');
-            hm.innerHTML = '';
-            // Use all available signals for heatmap
-            sigs.forEach(s => {
-                const cell = document.createElement('div');
-                cell.className = `hm-cell ${s.change < 0 ? 'hm-down' : ''}`;
-                cell.innerHTML = `<b>${s.symbol}</b><span>${s.change}%</span>`;
-                cell.onclick = () => selectSymbol(s);
-                hm.appendChild(cell);
+            const container = document.getElementById('heatmap');
+            container.innerHTML = '';
+            sigs.slice(0, 30).forEach(s => {
+                const div = document.createElement('div');
+                div.className = `hm-cell ${s.change >= 0 ? 'hm-up' : 'hm-down'}`;
+                div.innerHTML = `<b>${s.symbol}</b><span class="${s.change>=0?'color-up':'color-down'}">${s.change}%</span><small>RSI ${s.rsi}</small>`;
+                div.onclick = () => selectSymbol(s);
+                container.appendChild(div);
             });
         }
 
         function switchTab(tab, el) {
             activeTab = tab;
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             el.classList.add('active');
+            document.getElementById('tab-title').innerText = el.innerText.toUpperCase();
             renderTable();
         }
 
         function renderTable() {
-            if(!currentData) return;
             const body = document.getElementById('cockpit-body');
-            body.innerHTML = '';
+            const tableCont = document.querySelector('.table-container');
             
+            // Clean up previous views
+            body.innerHTML = '';
+            const existingGrid = tableCont.querySelector('.full-heatmap');
+            if(existingGrid) existingGrid.remove();
+            tableCont.querySelector('table').style.display = 'table';
+
             const list = currentData[activeTab] || [];
-            if (activeTab === 'sectors') {
-                body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-dim)">Sektörel bazlı analizler hazırlanıyor...</td></tr>';
+            
+            if (activeTab === 'heatmap') {
+                tableCont.querySelector('table').style.display = 'none';
+                const grid = document.createElement('div');
+                grid.className = 'full-heatmap';
+                
+                // Use all available signals for the full heatmap
+                const all = [...currentData.signals, ...currentData.setups, ...currentData.watchlist];
+                all.forEach(s => {
+                    const cell = document.createElement('div');
+                    cell.className = 'fh-cell';
+                    cell.innerHTML = `
+                        <b>${s.symbol}</b>
+                        <span class="${s.change >= 0 ? 'color-up' : 'color-down'}">${s.change >= 0 ? '+' : ''}${s.change}%</span>
+                        <div style="font-size:9px; color:var(--text-dim); margin-top:5px;">RSI: ${s.rsi} | QUALITY: ${s.quality}</div>
+                    `;
+                    cell.onclick = () => selectSymbol(s);
+                    grid.appendChild(cell);
+                });
+                tableCont.appendChild(grid);
                 return;
             }
-
-            if (list.length === 0) {
-                body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-dim)">Piyasa kapalı veya bu kategoride aktif veri bulunamadı.</td></tr>';
+            
+            if(list.length === 0 && activeTab !== 'heatmap') {
+                body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--text-dim)">KAYIT BULUNAMADI</td></tr>';
                 return;
             }
 
@@ -419,17 +438,17 @@
                 const tr = document.createElement('tr');
                 tr.onclick = () => selectSymbol(sig, tr);
                 tr.innerHTML = `
-                    <td style="font-weight:bold; color:var(--accent)">${sig.symbol || '---'}</td>
-                    <td>${currentData.market.regime.split(' ')[1] || 'RANGE'}</td>
-                    <td>${sig.strategy || 'N/A'}</td>
-                    <td>${sig.setup || 'N/A'}</td>
-                    <td style="color:var(--text)">₺${sig.entry || sig.price || '---'}</td>
-                    <td style="color:var(--danger)">₺${sig.stop || '---'}</td>
-                    <td style="color:var(--success)">₺${sig.target || '---'}</td>
-                    <td>${sig.rr || '0'}x</td>
-                    <td>%${sig.trust || '0'}</td>
-                    <td>${sig.sector || '---'}</td>
-                    <td style="font-weight:bold; color:${sig.quality=='A+'?'var(--success)':'var(--warning)'}">${sig.quality || 'B'}</td>
+                    <td style="font-weight:bold; color:var(--accent)">${sig.symbol}</td>
+                    <td>${currentData.market.regime.split(' ')[1]}</td>
+                    <td>${sig.strategy}</td>
+                    <td>${sig.setup}</td>
+                    <td style="color:#fff">₺${sig.entry}</td>
+                    <td style="color:var(--danger)">₺${sig.stop}</td>
+                    <td style="color:var(--success)">₺${sig.target}</td>
+                    <td>${sig.rr}x</td>
+                    <td>%${sig.trust}</td>
+                    <td>${sig.sector}</td>
+                    <td class="quality-${sig.quality.replace('+','plus')}">${sig.quality}</td>
                 `;
                 body.appendChild(tr);
             });
@@ -440,38 +459,38 @@
                 document.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
                 rowEl.classList.add('selected');
             }
-
-            document.getElementById('side-sym').innerHTML = `${sig.symbol} <span class="symbol-price">₺${sig.price}</span>`;
-            document.getElementById('side-change').innerText = `${sig.change >= 0 ? '+' : ''}${sig.change}%`;
-            document.getElementById('side-change').className = `symbol-change ${sig.change >= 0 ? 'color-up' : 'color-down'}`;
+            document.getElementById('s-name').innerText = sig.symbol;
+            document.getElementById('s-price').innerText = `₺${sig.price}`;
+            document.getElementById('s-change').innerText = `${sig.change >= 0 ? '+' : ''}${sig.change}%`;
+            document.getElementById('s-change').className = sig.change >= 0 ? 'color-up' : 'color-down';
             
-            document.getElementById('side-action').innerText = sig.action == 'AL' ? 'BUY SIGNAL' : sig.action == 'SAT' ? 'SELL SIGNAL' : 'WATCHLIST';
-            document.getElementById('side-action').style.background = sig.action == 'AL' ? '#065f46' : sig.action == 'SAT' ? '#991b1b' : '#1e3a8a';
+            document.getElementById('s-box').innerText = sig.action === 'AL' ? 'BUY SIGNAL' : sig.action === 'SAT' ? 'SELL SIGNAL' : 'WATCHLIST';
+            document.getElementById('s-box').style.background = sig.action === 'AL' ? '#065f46' : (sig.action === 'SAT' ? '#991b1b' : '#1e3a8a');
 
-            document.getElementById('side-entry').innerText = `₺${sig.entry || sig.price || '0.00'}`;
-            document.getElementById('side-stop').innerText = `₺${sig.stop || '0.00'}`;
-            document.getElementById('side-target').innerText = `₺${sig.target || '0.00'}`;
-            document.getElementById('side-rr').innerText = `${sig.rr || '0'}x`;
-            document.getElementById('side-trust').innerText = `%${sig.trust || '0'}`;
+            document.getElementById('t-entry').innerText = `₺${sig.entry}`;
+            document.getElementById('t-stop').innerText = `₺${sig.stop}`;
+            document.getElementById('t-target').innerText = `₺${sig.target}`;
+            document.getElementById('t-rr').innerText = `${sig.rr}x`;
+            document.getElementById('t-trust').innerText = `%${sig.trust}`;
             
-            const bg = document.getElementById('side-badges');
-            bg.innerHTML = `
-                <span class="badge ${sig.change > 0 ? 'b-green' : 'b-red'}">${sig.change > 0 ? '✓' : 'X'} Trend</span>
-                <span class="badge ${sig.quality == 'A+' ? 'b-green' : 'b-red'}">${sig.quality == 'A+' ? '✓' : 'X'} Kırılım</span>
-                <span class="badge b-green">✓ Hacim</span>
-                <span class="badge ${sig.rsi > 50 ? 'b-green' : 'b-red'}">${sig.rsi > 50 ? '✓' : 'X'} RSI</span>
+            // Badges
+            document.getElementById('s-badges').innerHTML = `
+                <span class="badge ${sig.change > 0 ? 'b-on':'b-off'}">✓ Trend</span>
+                <span class="badge ${sig.quality === 'A+' ? 'b-on':'b-off'}">✓ Kırılım</span>
+                <span class="badge b-on">✓ Hacim</span>
+                <span class="badge ${sig.rsi > 50 ? 'b-on':'b-off'}">✓ RSI</span>
             `;
         }
 
-        function updateClocks() {
-            const now = new Date();
-            document.getElementById('clock-time').innerText = now.toLocaleTimeString();
-            document.getElementById('clock-date').innerText = now.toLocaleDateString();
+        function tick() {
+            const d = new Date();
+            document.getElementById('h-clock').innerText = d.toLocaleTimeString();
+            document.getElementById('h-date').innerText = d.toLocaleDateString();
         }
-        setInterval(updateClocks, 1000);
+        setInterval(tick, 1000);
         setInterval(updateCockpit, 60000);
         updateCockpit();
-        updateClocks();
+        tick();
     </script>
 </body>
 </html>

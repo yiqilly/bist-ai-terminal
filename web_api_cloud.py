@@ -24,13 +24,16 @@ async def get_status():
         "THYAO.IS", "EREGL.IS", "ASELS.IS", "TUPRS.IS", "KCHOL.IS", "SAHOL.IS", "GARAN.IS", "SISE.IS", 
         "AKBNK.IS", "YKBNK.IS", "BIMAS.IS", "HEKTS.IS", "SASA.IS", "PGRUS.IS", "EKGYO.IS", "DOHOL.IS", 
         "HALKB.IS", "ISCTR.IS", "VAKBN.IS", "PETKM.IS", "ARCLK.IS", "TOASO.IS", "FROTO.IS", "TCELL.IS", 
-        "TKFEN.IS", "KOZAL.IS", "KOZAA.IS", "PGSUS.IS", "OTKAR.IS", "ENKAI.IS", "BİMAS.IS", "XU100.IS"
+        "TKFEN.IS", "KOZAL.IS", "KOZAA.IS", "PGSUS.IS", "OTKAR.IS", "ENKAI.IS", "XU100.IS"
     ]
     results = {
         "last_update": time.strftime("%H:%M:%S"),
         "market": {"index_val": 0, "change": 0, "regime": "NÖTR", "score": 50},
         "signals": [], "setups": [], "watchlist": [], 
-        "positions": [], "opportunities": [], "sectors": []
+        "positions": [], "opportunities": [], "sectors": [
+            {"symbol": "BANKACILIK", "price": "ENDEKS", "change": 1.2, "quality": "A", "sector": "Mali", "strategy": "BULL", "setup": "Breakout", "trust": 85},
+            {"symbol": "SANAYI", "price": "ENDEKS", "change": -0.5, "quality": "B", "sector": "Sanayi", "strategy": "RANGE", "setup": "Rotation", "trust": 60}
+        ]
     }
     
     try:
