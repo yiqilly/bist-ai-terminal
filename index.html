@@ -253,8 +253,8 @@
                 <div class="tab" onclick="switchTab('setups', this)">⏳ SETUP</div>
                 <div class="tab" onclick="switchTab('watchlist', this)">👁 WATCHLIST</div>
                 <div class="tab" onclick="switchTab('positions', this)">💼 POZİSYONLAR</div>
-                <div class="tab">🎯 Fırsatlar</div>
-                <div class="tab">📊 Sektörler</div>
+                <div class="tab" onclick="switchTab('opportunities', this)">🎯 Fırsatlar</div>
+                <div class="tab" onclick="switchTab('sectors', this)">📊 Sektörler</div>
             </div>
 
             <div class="signal-status-bar">
@@ -382,8 +382,8 @@
         function renderHeatmap(sigs) {
             const hm = document.getElementById('hm-grid');
             hm.innerHTML = '';
-            const displayList = sigs.concat(sigs).slice(0, 40);
-            displayList.forEach(s => {
+            // Use all available signals for heatmap
+            sigs.forEach(s => {
                 const cell = document.createElement('div');
                 cell.className = `hm-cell ${s.change < 0 ? 'hm-down' : ''}`;
                 cell.innerHTML = `<b>${s.symbol}</b><span>${s.change}%</span>`;
@@ -405,6 +405,16 @@
             body.innerHTML = '';
             
             const list = currentData[activeTab] || [];
+            if (activeTab === 'sectors') {
+                body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-dim)">Sektörel bazlı analizler hazırlanıyor...</td></tr>';
+                return;
+            }
+
+            if (list.length === 0) {
+                body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-dim)">Piyasa kapalı veya bu kategoride aktif veri bulunamadı.</td></tr>';
+                return;
+            }
+
             list.forEach(sig => {
                 const tr = document.createElement('tr');
                 tr.onclick = () => selectSymbol(sig, tr);

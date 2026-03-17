@@ -20,11 +20,17 @@ async def root():
 @app.get("/api/status")
 async def get_status():
     """ Optimized batch fetch for all symbols """
-    symbols = ["THYAO.IS", "EREGL.IS", "ASELS.IS", "TUPRS.IS", "KCHOL.IS", "SAHOL.IS", "GARAN.IS", "XU100.IS"]
+    symbols = [
+        "THYAO.IS", "EREGL.IS", "ASELS.IS", "TUPRS.IS", "KCHOL.IS", "SAHOL.IS", "GARAN.IS", "SISE.IS", 
+        "AKBNK.IS", "YKBNK.IS", "BIMAS.IS", "HEKTS.IS", "SASA.IS", "PGRUS.IS", "EKGYO.IS", "DOHOL.IS", 
+        "HALKB.IS", "ISCTR.IS", "VAKBN.IS", "PETKM.IS", "ARCLK.IS", "TOASO.IS", "FROTO.IS", "TCELL.IS", 
+        "TKFEN.IS", "KOZAL.IS", "KOZAA.IS", "PGSUS.IS", "OTKAR.IS", "ENKAI.IS", "BİMAS.IS", "XU100.IS"
+    ]
     results = {
         "last_update": time.strftime("%H:%M:%S"),
         "market": {"index_val": 0, "change": 0, "regime": "NÖTR", "score": 50},
-        "signals": [], "setups": [], "watchlist": []
+        "signals": [], "setups": [], "watchlist": [], 
+        "positions": [], "opportunities": [], "sectors": []
     }
     
     try:
@@ -76,9 +82,19 @@ async def get_status():
                         "lot": 0
                     }
 
-                    if sig_data["action"] == "AL": results["signals"].append(sig_data)
-                    elif sig_data["action"] == "IZLE": results["watchlist"].append(sig_data)
-                    else: results["setups"].append(sig_data)
+                    if sig_data["action"] == "AL": 
+                        results["signals"].append(sig_data)
+                        results["opportunities"].append(sig_data)
+                    elif sig_data["action"] == "IZLE": 
+                        results["watchlist"].append(sig_data)
+                    else: 
+                        results["setups"].append(sig_data)
+                    
+                    # Mock some positions for UI demonstration
+                    if sym in ["THYAO.IS", "EREGL.IS"]:
+                        pos_data = sig_data.copy()
+                        pos_data["lot"] = 100
+                        results["positions"].append(pos_data)
                     
     except Exception as e:
         print(f"Genel Hata: {e}")
