@@ -51,6 +51,12 @@ _state_lock = threading.Lock()
 _ws_clients: list[WebSocket] = []
 
 
+# ── Sembol→Sektör map (lazy import) ──────────────────────────
+try:
+    from data.sector_map import SYMBOL_SECTOR as _SYMBOL_SECTOR
+except Exception:
+    _SYMBOL_SECTOR = {}
+
 # ── Helpers ───────────────────────────────────────────────────
 def _f(v, decimals=2):
     """Float'u güvenli yuvarlar; NaN/Inf → 0."""
@@ -77,8 +83,8 @@ def _serialize_signal(rs) -> dict:
         "momentum": _f(c.momentum),
         "score":    _f(rs.combined_score, 1),
         "ai_score": _f(rs.ai_score, 1),
-        "quality":  rs.quality_label,
-        "trust":    _f(rs.confidence * 100, 1),
+        "quality":  {"Elite": "A+", "Strong": "A", "Watchlist": "B", "Weak": "C"}.get(rs.quality_label, rs.quality_label),
+        "trust":    _f(rs.confidence, 1),
         "entry":    _f(r.entry),
         "stop":     _f(r.stop),
         "target":   _f(r.target),
@@ -88,7 +94,7 @@ def _serialize_signal(rs) -> dict:
         "strategy": "BULL_BREAKOUT" if c.breakout else "TREND",
         "lot":      rs.position_size.suggested_lots if rs.position_size else 0,
         "alerts":   rs.alerts,
-        "sector":   "",
+        "sector":   _SYMBOL_SECTOR.get(c.symbol, ""),
     }
 
 
@@ -113,7 +119,7 @@ def _serialize_candidate(c) -> dict:
         "rr":       1.5,
         "lot":      0,
         "alerts":   [],
-        "sector":   "",
+        "sector":   _SYMBOL_SECTOR.get(c.symbol, ""),
     }
 
 
@@ -164,7 +170,7 @@ def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, sou
                 pos_out = []
                 for pos in portfolio.positions:
                     tick = snap.ticks.get(pos.symbol)
-                    price = _f(tick.last if tick else pos.avg_cost)
+                    price = _f(tick.price if tick else pos.avg_cost)
                     pos_out.append({
                         "symbol": pos.symbol,
                         "price":  price,
