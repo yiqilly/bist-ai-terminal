@@ -200,17 +200,29 @@
 
         async function updateCockpit() {
             const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
+            const headerStatus = document.getElementById('market-idx');
+            const body = document.getElementById('cockpit-body');
+            
             try {
+                if (!currentData) body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">⏱ Veriler yükleniyor (Render uyanıyor olabilir)...</td></tr>';
+                
+                headerStatus.innerText = "BIST 100: FETCHING...";
                 const res = await fetch(api_url);
+                if (!res.ok) throw new Error("API sunucusu hata döndürdü.");
+                
                 currentData = await res.json();
                 
                 // Top Bar
-                document.getElementById('market-idx').innerText = `BIST 100: ${currentData.market.index_val} (${currentData.market.change}%)`;
+                document.getElementById('market-idx').innerText = `BIST 100: ${currentData.market.index_val} (${currentData.market.change > 0 ? '+' : ''}${currentData.market.change}%)`;
                 document.getElementById('market-regime').innerText = currentData.market.regime;
-                document.getElementById('market-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : '#ef4444';
+                document.getElementById('market-regime').style.color = currentData.market.regime.includes('BULL') ? '#4ade80' : (currentData.market.regime.includes('BEAR') ? '#ef4444' : '#fbbf24');
                 
                 renderTable();
-            } catch (err) { console.error("API Hatası:", err); }
+            } catch (err) { 
+                console.error("API Hatası:", err);
+                headerStatus.innerText = "BIST 100: BAĞLANTI HATASI";
+                body.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--danger)">⚠️ Veri alınamadı. Render sunucusu hala uyanıyor olabilir. Lütfen 1 dakika sonra tekrar yenileyiniz.</td></tr>`;
+            }
         }
 
         function switchTab(tab, el) {
@@ -226,16 +238,21 @@
             body.innerHTML = '';
             
             const list = currentData[activeTab] || [];
+            if (list.length === 0) {
+                body.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-dim)">Bu kategoride şu an aktif hisse bulunmamaktadır.</td></tr>`;
+                return;
+            }
+
             list.forEach(sig => {
                 const tr = document.createElement('tr');
-                tr.onclick = () => selectSymbol(sig, tr);
+                tr.onclick = (e) => selectSymbol(sig, tr);
                 tr.innerHTML = `
                     <td style="font-weight:bold">${sig.symbol}</td>
                     <td>₺${sig.price}</td>
                     <td class="${sig.change >= 0 ? 'color-up' : 'color-down'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</td>
                     <td>%${sig.trust}</td>
                     <td>${sig.sector}</td>
-                    <td><span class="badge ${sig.action == 'AL' ? 'q-aplus' : 'q-b'}">${sig.action}</span></td>
+                    <td><span class="badge ${sig.action == 'AL' ? 'q-aplus' : (sig.action == 'SAT' ? 'q-b' : 'q-a')}">${sig.action}</span></td>
                     <td><span class="q-${sig.quality.toLowerCase().replace('+','plus')}">${sig.quality}</span></td>
                 `;
                 body.appendChild(tr);
@@ -268,7 +285,7 @@
             document.getElementById('system-clock').innerText = new Date().toLocaleTimeString();
         }
         setInterval(updateClock, 1000);
-        setInterval(updateCockpit, 30000);
+        setInterval(updateCockpit, 60000); // Otomatik 1 dakikada bir güncelle
         updateCockpit();
     </script>
 </body>
