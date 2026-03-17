@@ -356,12 +356,12 @@
         let ws = null;
         let wsReconnectTimer = null;
 
+        const BACKEND = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+            ? `http://localhost:${location.port || 8000}`
+            : 'https://bist-ai-terminal.onrender.com';
+
         function getWsUrl() {
-            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-            const host  = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-                ? `${location.hostname}:${location.port || 8000}`
-                : location.host;
-            return `${proto}://${host}/ws`;
+            return BACKEND.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws';
         }
 
         function setStatus(state) {
@@ -414,7 +414,7 @@
         async function updateCockpit() {
             if (ws && ws.readyState === WebSocket.OPEN) return;
             try {
-                const res = await fetch('/api/status');
+                const res = await fetch(BACKEND + '/api/status');
                 currentData = await res.json();
                 applyData();
             } catch (err) { console.error("Fallback fetch error:", err); }
