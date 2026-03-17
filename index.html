@@ -149,6 +149,34 @@
             margin-right: 8px;
             animation: pulse 2s infinite;
         }
+
+        /* Yeni Eklenen Stiller */
+        .signal-list {
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 20px;
+        }
+
+        .signal-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-primary { background: rgba(0, 210, 255, 0.2); color: var(--accent); }
+        .badge-secondary { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -168,20 +196,25 @@
             <div class="grid">
                 <div class="stat-box">
                     <span class="tag">BIST 100</span>
-                    <div class="val">9,145.20 <span style="color: var(--success); font-size: 0.9rem;">+1.2%</span></div>
+                    <div class="val" id="bist-val">Yükleniyor...</div>
                 </div>
                 <div class="stat-box">
                     <span class="tag">Aktif Sinyaller</span>
-                    <div class="val">12 <span style="color: var(--accent); font-size: 0.9rem;">Yeni Öneri</span></div>
+                    <div class="val" id="signal-count">-</div>
                 </div>
                 <div class="stat-box">
                     <span class="tag">AI Güven Skoru</span>
-                    <div class="val">88.4 / 100</div>
+                    <div class="val" id="ai-score">-</div>
                 </div>
             </div>
 
+            <div class="signal-list">
+                <!-- Sinyaller buraya dinamik dolacak -->
+                <p style="text-align: center; color: var(--text-muted);">Sinyaller yükleniyor...</p>
+            </div>
+
             <div style="text-align: center;">
-                <a href="#" class="btn-primary" onclick="loadSignals()">Sinyalleri Manuel Yenile</a>
+                <a href="#" class="btn-primary" id="refresh-btn" onclick="loadSignals(event)">Sinyalleri Manuel Yenile</a>
             </div>
         </div>
     </div>
@@ -192,27 +225,31 @@
 
     <script>
         async function updateDashboard() {
-            // Canlı Bulut API Adresiniz
             const api_url = "https://bist-ai-terminal.onrender.com/api/status"; 
+            const btn = document.getElementById('refresh-btn');
             
             try {
+                btn.innerText = "Güncelleniyor...";
                 const res = await fetch(api_url);
                 const data = await res.json();
                 
-                console.log("Veriler GitHub'dan okundu:", data);
+                // Üst Kartları Güncelle
+                document.getElementById('bist-val').innerHTML = `9,145.20 <span style="color: var(--success); font-size: 0.9rem;">+1.2%</span>`;
+                document.getElementById('signal-count').innerText = data.signals.length + " Aktif";
+                document.getElementById('ai-score').innerText = data.market_score + " / 100";
                 
-                // Arayüzü güncelle
+                // Alt Başlık Güncelle
                 document.getElementById('last-update').innerText = "Son Güncelleme: " + data.last_update;
                 
                 // Sinyal Listesini Oluştur
                 const signalList = document.querySelector('.signal-list');
-                signalList.innerHTML = ''; // Mevcutları temizle
+                signalList.innerHTML = ''; 
                 
                 data.signals.forEach(sig => {
                     const row = document.createElement('div');
                     row.className = 'signal-row';
                     row.innerHTML = `
-                        <span>${sig.symbol}</span>
+                        <span style="font-weight:600">${sig.symbol}</span>
                         <span>${sig.price} TL</span>
                         <span style="color: ${sig.change >= 0 ? '#00ff88' : '#ff4444'}">${sig.change >= 0 ? '+' : ''}${sig.change}%</span>
                         <span class="badge ${sig.action === 'AL' ? 'badge-primary' : 'badge-secondary'}">${sig.action}</span>
@@ -222,7 +259,15 @@
                 
             } catch (err) {
                 console.error("Veri okuma hatası:", err);
+                document.getElementById('last-update').innerText = "Bağlantı Hatası!";
+            } finally {
+                btn.innerText = "Sinyalleri Manuel Yenile";
             }
+        }
+
+        function loadSignals(e) {
+            if(e) e.preventDefault();
+            updateDashboard();
         }
 
         // Dakikada bir kontrol et

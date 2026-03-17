@@ -34,21 +34,31 @@ async def get_status():
     for sym in symbols:
         try:
             ticker = yf.Ticker(sym)
-            # 1 günlük veriyi ve son fiyatı al
-            df = ticker.history(period="1d")
-            if not df.empty:
+            # 2 günlük veri alıyoruz (bugün ve dün) hızı artırmak için
+            df = ticker.history(period="2d")
+            if len(df) >= 2:
                 last_price = df['Close'].iloc[-1]
-                prev_close = ticker.info.get('previousClose', last_price)
+                prev_close = df['Close'].iloc[-2]
                 change = ((last_price - prev_close) / prev_close) * 100
                 
                 results["signals"].append({
                     "symbol": sym.replace(".IS", ""),
                     "price": round(last_price, 2),
                     "change": round(change, 2),
-                    "action": "AL" if change > 1 else "IZLE" if change > -1 else "SAT"
+                    "action": "AL" if change > 0.5 else "IZLE" if change > -0.5 else "SAT"
                 })
                 total_change += change
-        except:
+            elif not df.empty:
+                # Sadece bugün varsa
+                last_price = df['Close'].iloc[-1]
+                results["signals"].append({
+                    "symbol": sym.replace(".IS", ""),
+                    "price": round(last_price, 2),
+                    "change": 0.0,
+                    "action": "IZLE"
+                })
+        except Exception as e:
+            print(f"Hata {sym}: {e}")
             continue
             
     results["market_score"] = round(50 + (total_change * 3), 1)
