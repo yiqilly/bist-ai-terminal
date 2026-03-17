@@ -6,7 +6,7 @@
 #
 # Başlatma:
 #   python web_server.py                 # borsapy (gerçek)
-#   python web_server.py --mock          # mock mod (Render/test)
+#   python web_server.py --mock          # mock mod
 #   uvicorn web_server:app --host 0.0.0.0 --port 8000
 # ============================================================
 import argparse
@@ -34,7 +34,7 @@ try:
 except Exception:
     pass
 
-# ── Global pipeline state ────────────────────────────────────
+# ── Global state ─────────────────────────────────────────────
 _state: dict = {
     "last_update": None,
     "source": "boot",
@@ -46,15 +46,14 @@ _state: dict = {
     "watchlist": [],
     "positions": [],
     "sectors": [],
-    "rs": [],
 }
 _state_lock = threading.Lock()
 _ws_clients: list[WebSocket] = []
 
 
-# ── Helpers ─────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────
 def _f(v, decimals=2):
-    """Float'u güvenli şekilde yuvarlar, NaN/Inf → 0."""
+    """Float'u güvenli yuvarlar; NaN/Inf → 0."""
     try:
         x = float(v)
         return 0 if (math.isnan(x) or math.isinf(x)) else round(x, decimals)
@@ -62,33 +61,34 @@ def _f(v, decimals=2):
         return 0
 
 
-# ── Serializers ──────────────────────────────────────────────
+# ── Serializers ───────────────────────────────────────────────
 def _serialize_signal(rs) -> dict:
     c = rs.candidate
     r = rs.risk
     change_pct = _f((c.price - c.prev_price) / c.prev_price * 100) if c.prev_price else 0
     return {
-        "symbol":    c.symbol,
-        "price":     _f(c.price),
-        "change":    change_pct,
-        "rsi":       _f(c.rsi, 1),
-        "ema9":      _f(c.ema9),
-        "ema21":     _f(c.ema21),
-        "atr":       _f(c.atr, 3),
-        "momentum":  _f(c.momentum),
-        "score":     _f(rs.combined_score, 1),
-        "ai_score":  _f(rs.ai_score, 1),
-        "quality":   rs.quality_label,
-        "trust":     _f(rs.confidence * 100, 1),
-        "entry":     _f(r.entry),
-        "stop":      _f(r.stop),
-        "target":    _f(r.target),
-        "rr":        _f(r.rr_ratio),
-        "action":    "AL",
-        "setup":     rs.core_setup_type if rs.core_setup_type != "None" else "Sinyal",
-        "strategy":  "BULL_BREAKOUT" if c.breakout else "TREND",
-        "lot":       rs.position_size.lots if rs.position_size else 0,
-        "alerts":    rs.alerts,
+        "symbol":   c.symbol,
+        "price":    _f(c.price),
+        "change":   change_pct,
+        "rsi":      _f(c.rsi, 1),
+        "ema9":     _f(c.ema9),
+        "ema21":    _f(c.ema21),
+        "atr":      _f(c.atr, 3),
+        "momentum": _f(c.momentum),
+        "score":    _f(rs.combined_score, 1),
+        "ai_score": _f(rs.ai_score, 1),
+        "quality":  rs.quality_label,
+        "trust":    _f(rs.confidence * 100, 1),
+        "entry":    _f(r.entry),
+        "stop":     _f(r.stop),
+        "target":   _f(r.target),
+        "rr":       _f(r.rr_ratio),
+        "action":   "AL",
+        "setup":    rs.core_setup_type if rs.core_setup_type != "None" else "Sinyal",
+        "strategy": "BULL_BREAKOUT" if c.breakout else "TREND",
+        "lot":      rs.position_size.lots if rs.position_size else 0,
+        "alerts":   rs.alerts,
+        "sector":   "",
     }
 
 
@@ -113,13 +113,12 @@ def _serialize_candidate(c) -> dict:
         "rr":       1.5,
         "lot":      0,
         "alerts":   [],
+        "sector":   "",
     }
 
 
-# ── Pipeline loop (background thread) ───────────────────────
-def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
-                   portfolio, source_label):
-    """Gerçek pipeline'ı her 2 saniyede çalıştırır, _state'i günceller."""
+# ── Pipeline loop (background thread) ────────────────────────
+def _pipeline_loop(bus, scanner, ranker, context_eng, sector_eng, portfolio, source_label):
     logger.info("Pipeline loop başlatıldı.")
     while True:
         try:
@@ -128,47 +127,43 @@ def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
                 time.sleep(1)
                 continue
 
-            # Analiz
-            candidates  = scanner.scan(snap)
-            regime      = regime_eng.analyze(snap)
-            ranked      = ranker.rank(candidates, regime)
+            # Tarama + bağlam
+            candidates = scanner.scan(snap)
+            context    = context_eng.compute(snap, candidates)  # MarketContext
+            ranked     = ranker.rank(candidates, context, candidates)
 
-            # Sector
+            # Sektörler
             try:
-                sector_eng.update(snap)
-                sectors_raw = sector_eng.get_summary()
-                sectors = [{"name": s.sector, "change": round(s.avg_change, 2),
-                            "strength": round(s.strength, 1), "count": s.count}
-                           for s in sectors_raw] if sectors_raw else []
+                sectors_dict = sector_eng.compute(candidates, snap)
+                sectors_out = [
+                    {
+                        "name":     ss.name,
+                        "change":   _f(ss.avg_change_pct),
+                        "strength": _f(ss.strength, 1),
+                        "count":    len(ss.symbols),
+                    }
+                    for ss in sectors_dict.values()
+                ]
             except Exception:
-                sectors = []
+                sectors_out = []
 
-            # RS
+            # Pozisyonlar
             try:
-                rs_eng.update(snap)
-                rs_data = rs_eng.get_top(10)
-                rs_list = [{"symbol": r.symbol, "rs": round(r.rs_score, 2),
-                            "rank": r.rank} for r in rs_data] if rs_data else []
-            except Exception:
-                rs_list = []
-
-            # Positions
-            try:
-                pos_list = []
-                for pos in portfolio.get_open_positions():
-                    cur_price = snap.ticks.get(pos.symbol)
-                    price = cur_price.last if cur_price else pos.entry_price
-                    pnl = round((price - pos.entry_price) / pos.entry_price * 100, 2)
-                    pos_list.append({
-                        "symbol": pos.symbol, "price": round(price, 2),
-                        "entry": round(pos.entry_price, 2), "lot": pos.lots,
-                        "pnl": pnl, "stop": round(pos.stop_price, 2),
-                        "target": round(pos.target_price, 2),
+                pos_out = []
+                for pos in portfolio.positions:
+                    tick = snap.ticks.get(pos.symbol)
+                    price = _f(tick.last if tick else pos.avg_cost)
+                    pos_out.append({
+                        "symbol": pos.symbol,
+                        "price":  price,
+                        "entry":  _f(pos.avg_cost),
+                        "qty":    _f(pos.quantity),
+                        "pnl":    _f(pos.pnl_pct, 2),
                     })
             except Exception:
-                pos_list = []
+                pos_out = []
 
-            # Signals / Setups / Watchlist / Opportunities
+            # Sinyal listelerini ayır
             signals_out      = []
             setups_out       = []
             watchlist_out    = []
@@ -186,28 +181,29 @@ def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
                 if c.score < 3:
                     watchlist_out.append(_serialize_candidate(c))
 
-            # Market context
+            # Piyasa bağlamı
             market_out = {
-                "index_val":  round(regime.index_price, 2) if hasattr(regime, "index_price") else 0,
-                "change":     round(regime.index_change, 2) if hasattr(regime, "index_change") else 0,
-                "regime":     str(regime.regime) if hasattr(regime, "regime") else "NÖTR",
-                "score":      round(regime.score, 1) if hasattr(regime, "score") else 50,
-                "advancing":  snap.advancing if hasattr(snap, "advancing") else 0,
-                "declining":  snap.declining if hasattr(snap, "declining") else 0,
-                "unchanged":  snap.unchanged if hasattr(snap, "unchanged") else 0,
+                "index_val":  0,
+                "change":     0,
+                "regime":     context.regime,
+                "label":      context.label,
+                "score":      _f(context.market_strength, 1),
+                "advancing":  context.advancing,
+                "declining":  context.declining,
+                "unchanged":  context.unchanged,
+                "breadth":    _f(context.breadth_pct, 1),
             }
 
             with _state_lock:
-                _state["last_update"]   = time.strftime("%H:%M:%S")
-                _state["source"]        = source_label
-                _state["market"]        = market_out
-                _state["signals"]       = signals_out
-                _state["setups"]        = setups_out
-                _state["watchlist"]     = watchlist_out
-                _state["opportunities"] = opportunities_out
-                _state["positions"]     = pos_list
-                _state["sectors"]       = sectors
-                _state["rs"]            = rs_list
+                _state["last_update"]    = time.strftime("%H:%M:%S")
+                _state["source"]         = source_label
+                _state["market"]         = market_out
+                _state["signals"]        = signals_out
+                _state["setups"]         = setups_out
+                _state["watchlist"]      = watchlist_out
+                _state["opportunities"]  = opportunities_out
+                _state["positions"]      = pos_out
+                _state["sectors"]        = sectors_out
 
         except Exception as e:
             logger.error(f"Pipeline loop hatası: {e}", exc_info=True)
@@ -215,7 +211,7 @@ def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
         time.sleep(2)
 
 
-# ── FastAPI app ──────────────────────────────────────────────
+# ── FastAPI ───────────────────────────────────────────────────
 app = FastAPI(title="BIST Terminal Web API")
 
 app.add_middleware(
@@ -231,7 +227,7 @@ async def root():
     index_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"status": "BIST Terminal API çalışıyor", "endpoints": ["/api/status", "/ws"]}
+    return {"status": "BIST Terminal API çalışıyor"}
 
 
 @app.get("/api/status")
@@ -256,28 +252,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = dict(_state)
             await websocket.send_json(data)
             await asyncio.sleep(2)
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
         pass
-    except Exception as e:
-        logger.warning(f"WebSocket hatası: {e}")
     finally:
         if websocket in _ws_clients:
             _ws_clients.remove(websocket)
-        logger.info(f"WebSocket ayrıldı. Toplam: {len(_ws_clients)}")
 
 
-# ── Startup: pipeline'ı başlat ───────────────────────────────
+# ── Startup ───────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
     import yaml
 
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--mock",    action="store_true")
-    parser.add_argument("--source",  default=None)
+    parser.add_argument("--mock",     action="store_true")
+    parser.add_argument("--source",   default=None)
     parser.add_argument("--universe", default=None)
     args, _ = parser.parse_known_args()
 
-    # Render ortamında mock mod (borsapy bağlantısı test edilmeden önce)
     force_mock = os.environ.get("FORCE_MOCK", "").lower() in ("1", "true", "yes")
     source = "mock" if (args.mock or force_mock) else (args.source or "borsapy")
 
@@ -288,9 +280,8 @@ async def startup_event():
     except Exception:
         cfg = {}
 
-    if source == "borsapy" and not args.mock:
-        env_source = cfg.get("active_source", "borsapy")
-        source = env_source
+    if not (args.mock or force_mock):
+        source = cfg.get("active_source", "borsapy")
 
     from config import UNIVERSE as default_universe
     from data.symbols import get_universe
@@ -331,29 +322,21 @@ async def startup_event():
     from risk.risk_engine               import RiskEngine
     from portfolio.portfolio_engine     import PortfolioEngine
     from news.news_engine               import NewsEngine
-    from recommendations.broker_engine  import BrokerEngine
 
-    try:
-        from strategy.relative_strength import RelativeStrengthEngine
-        rs_eng = RelativeStrengthEngine()
-    except Exception:
-        rs_eng = None
-
-    scanner    = MarketScanner(adapter)
-    regime_eng = MarketContextEngine()
-    sector_eng = SectorStrengthEngine()
-    news       = NewsEngine()
-    scorer     = CombinedScorer(news)
-    ranker     = SignalRanker(RiskEngine(), scorer)
-    portfolio  = PortfolioEngine()
+    scanner     = MarketScanner(adapter)
+    context_eng = MarketContextEngine()
+    sector_eng  = SectorStrengthEngine()
+    news        = NewsEngine()
+    scorer      = CombinedScorer(news)
+    ranker      = SignalRanker(RiskEngine(), scorer)
+    portfolio   = PortfolioEngine()
 
     bus.start()
     logger.info("MarketBus başladı.")
 
-    # Pipeline'ı arka planda başlat
     t = threading.Thread(
         target=_pipeline_loop,
-        args=(bus, scanner, ranker, regime_eng, sector_eng, rs_eng, portfolio, source),
+        args=(bus, scanner, ranker, context_eng, sector_eng, portfolio, source),
         daemon=True,
         name="pipeline-loop",
     )
