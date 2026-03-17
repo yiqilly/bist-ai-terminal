@@ -86,7 +86,7 @@ def _serialize_signal(rs) -> dict:
         "action":   "AL",
         "setup":    rs.core_setup_type if rs.core_setup_type != "None" else "Sinyal",
         "strategy": "BULL_BREAKOUT" if c.breakout else "TREND",
-        "lot":      rs.position_size.lots if rs.position_size else 0,
+        "lot":      rs.position_size.suggested_lots if rs.position_size else 0,
         "alerts":   rs.alerts,
         "sector":   "",
     }
