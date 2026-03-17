@@ -130,8 +130,8 @@ def _pipeline_loop(bus, scanner, ranker, regime_eng, sector_eng, rs_eng,
 
             # Analiz
             candidates  = scanner.scan(snap)
-            ranked      = ranker.rank(candidates, snap)
             regime      = regime_eng.analyze(snap)
+            ranked      = ranker.rank(candidates, regime)
 
             # Sector
             try:
