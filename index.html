@@ -235,6 +235,32 @@
         .color-up   { color: var(--success); }
         .color-down { color: var(--danger); }
         .color-warn { color: var(--warning); }
+
+        /* ── Responsive / Mobil Uyumluluk ── */
+        @media (max-width: 768px) {
+            body { height: auto; overflow: auto; }
+            header { flex-direction: column; height: auto; padding: 10px; gap: 8px; text-align: center; }
+            .h-center { flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 5px; }
+            .h-right { width: 100%; justify-content: space-around; gap: 8px; margin-top: 5px; }
+            
+            .market-bar { flex-wrap: wrap; height: auto; padding: 10px; gap: 10px; justify-content: center; }
+            .mbar-item { margin-left: 0 !important; }
+            
+            .heatmap { display: none; /* Mobilde yer kazanmak için heatmap gizlenebilir veya kaydırılabilir yapılabilir. Şimdilik gizli tutalım veya grid'i küçültelim. */ }
+            /* Veya heatmap'in taşmasına izin ver: */
+            /* .heatmap { grid-template-columns: repeat(20, minmax(20px, 1fr)); overflow-x: auto; height: 60px; } */
+
+            .workspace { display: flex; flex-direction: column; height: auto; overflow: visible; }
+            .signals-area { border-right: none; border-bottom: 2px solid var(--border); overflow: visible; min-height: 300px; }
+            
+            .tab-bar { overflow-x: auto; padding-bottom: 2px; justify-content: flex-start; }
+            .tab { padding: 0 10px; font-size: 10px; }
+            
+            .table-wrap { overflow-x: auto; max-height: 400px; }
+            th, td { padding: 6px 4px; font-size: 10px; white-space: nowrap; }
+            
+            .detail { overflow: visible; padding: 10px; }
+        }
     </style>
 </head>
 <body>
