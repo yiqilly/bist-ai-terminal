@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+requests
+yfinance
+websockets
+borsapy
+pyyaml

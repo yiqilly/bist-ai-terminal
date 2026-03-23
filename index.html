@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIST Edge Terminal v2</title>
+    <style>
+        :root {
+            --bg:         #030712;
+            --panel:      #080c14;
+            --card:       #0f172a;
+            --accent:     #00d2ff;
+            --text:       #e2e8f0;
+            --text-dim:   #64748b;
+            --success:    #4ade80;
+            --danger:     #f87171;
+            --warning:    #fbbf24;
+            --border:     #1e293b;
+            --core-color: #00d2ff;   /* CORE_EDGE — mavi */
+            --swing-color:#a78bfa;   /* SWING_EDGE — mor */
+            --mono:       'Consolas','Monaco','Courier New',monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #020617;
+            border-bottom: 2px solid var(--accent);
+            height: 42px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .h-left {
+            display: flex; align-items: center; gap: 12px;
+            font-weight: bold; color: var(--accent);
+        }
+        .h-center {
+            display: flex; align-items: center; gap: 32px;
+            font-weight: bold;
+        }
+        .h-right {
+            display: flex; align-items: center; gap: 16px;
+            font-size: 11px;
+        }
+        .badge-core  { background:#0e3a4a; color:var(--core-color);  padding:2px 8px; border-radius:2px; font-size:10px; }
+        .badge-swing { background:#2e1f5e; color:var(--swing-color); padding:2px 8px; border-radius:2px; font-size:10px; }
+
+        /* ── Market Bar ── */
+        .market-bar {
+            background: #020617;
+            border-bottom: 1px solid var(--border);
+            height: 30px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        .mbar-item { display: flex; gap: 6px; }
+        .mbar-label { color: var(--text-dim); }
+
+        /* ── Heatmap ── */
+        .heatmap {
+            height: 70px;
+            background: #010409;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 1px;
+            padding: 1px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .hm-cell {
+            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: #0d1117;
+            transition: 0.1s;
+            flex-shrink: 0;
+        }
+        .hm-cell:hover { background: #161b22; }
+        .hm-cell.core-cell  { border-color: rgba(0,210,255,0.25); }
+        .hm-cell.swing-cell { border-color: rgba(167,139,250,0.25); }
+        .hm-sym  { font-size: 9px; font-weight: bold; color: var(--accent); }
+        .hm-pct  { font-size: 10px; font-weight: bold; }
+        .hm-type { font-size: 8px; color: var(--text-dim); }
+
+        /* ── Layout ── */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Left: Signal Table ── */
+        .signals-area {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            background: var(--panel);
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            height: 34px;
+            flex-shrink: 0;
+        }
+        .tab {
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            color: var(--text-dim);
+            font-size: 11px;
+            border-right: 1px solid var(--border);
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active {
+            background: #1e293b;
+            color: var(--accent);
+            border-top: 2px solid var(--accent);
+        }
+        .tab .cnt {
+            background: #1e293b;
+            color: var(--text);
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 8px;
+            min-width: 18px;
+            text-align: center;
+        }
+        .tab.active .cnt { background: var(--accent); color: #000; }
+
+        .table-wrap { flex: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: #020617;
+            color: var(--success);
+            text-align: left;
+            padding: 7px 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--success);
+            white-space: nowrap;
+        }
+        td { padding: 7px 10px; border-bottom: 1px solid #0d1117; }
+        tr:hover { background: rgba(0,210,255,0.04); cursor: pointer; }
+        tr.sel { background: rgba(0,210,255,0.12); }
+
+        .tag-core  { background:#0e3a4a; color:var(--core-color);  padding:2px 6px; border-radius:2px; font-size:9px; font-weight:bold; }
+        .tag-swing { background:#2e1f5e; color:var(--swing-color); padding:2px 6px; border-radius:2px; font-size:9px; font-weight:bold; }
+        .w-pct { font-size: 10px; color: var(--text-dim); }
+
+        /* ── Right: Detail Panel ── */
+        .detail {
+            background: #020617;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            overflow-y: auto;
+            gap: 10px;
+        }
+
+        .d-sym  { font-size: 22px; font-weight: bold; color: var(--accent); }
+        .d-price { font-size: 15px; }
+        .d-type { margin-top: 4px; }
+
+        .signal-box {
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            letter-spacing: 1px;
+            border-radius: 3px;
+            border: 1px solid;
+        }
+        .signal-box.core  { background:#0e3a4a; border-color:var(--core-color);  color:var(--core-color); }
+        .signal-box.swing { background:#2e1f5e; border-color:var(--swing-color); color:var(--swing-color); }
+        .signal-box.none  { background:#1e293b; border-color:var(--border);      color:var(--text-dim); }
+
+        .trade-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+        .tg-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 8px 4px;
+            text-align: center;
+            border-radius: 2px;
+        }
+        .tg-label { font-size: 8px; color: var(--text-dim); display: block; margin-bottom: 3px; text-transform: uppercase; }
+        .tg-val   { font-size: 13px; font-weight: bold; }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 3px 0;
+            border-bottom: 1px solid #0d1117;
+        }
+        .detail-row .lbl { color: var(--text-dim); }
+
+        .sector-table { width: 100%; border-collapse: collapse; }
+        .sector-table td { padding: 5px 8px; border-bottom: 1px solid #0d1117; font-size: 11px; }
+        .sector-bar {
+            background: linear-gradient(90deg, rgba(74,222,128,0.15) var(--pct), transparent var(--pct));
+        }
+
+        .color-up   { color: var(--success); }
+        .color-down { color: var(--danger); }
+        .color-warn { color: var(--warning); }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+    <div class="h-left">
+        ⬡ BIST Edge Terminal <small style="color:var(--text-dim); font-size:10px">v2</small>
+    </div>
+    <div class="h-center">
+        <span id="h-idx">XU100: <b>---</b></span>
+        <span><span class="badge-core">CORE %80</span> <span class="badge-swing">SWING %20</span></span>
+    </div>
+    <div class="h-right">
+        <span id="ws-dot" style="font-weight:bold;color:#fbbf24">○ BAĞLANIYOR</span>
+        <span id="h-clock">00:00:00</span>
+        <span id="h-date"></span>
+    </div>
+</header>
+
+<!-- ── Market Bar ── -->
+<div class="market-bar">
+    <div class="mbar-item"><span class="mbar-label">YÜKSELİYOR</span><span id="m-adv" class="color-up">0</span></div>
+    <div class="mbar-item"><span class="mbar-label">DÜŞÜYOR</span><span id="m-dec" class="color-down">0</span></div>
+    <div class="mbar-item"><span class="mbar-label">DEĞİŞMEDİ</span><span id="m-unch" style="color:var(--text-dim)">0</span></div>
+    <div class="mbar-item" style="margin-left:auto">
+        <span class="mbar-label">CORE SİNYAL</span><span id="m-core" style="color:var(--core-color)">0</span>
+    </div>
+    <div class="mbar-item">
+        <span class="mbar-label">SWING SİNYAL</span><span id="m-swing" style="color:var(--swing-color)">0</span>
+    </div>
+    <div class="mbar-item">
+        <span class="mbar-label">SON GÜNCELLEME</span><span id="m-ts" style="color:var(--text-dim)">--:--:--</span>
+    </div>
+</div>
+
+<!-- ── Heatmap ── -->
+<div class="heatmap" id="heatmap"></div>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+    <!-- Left: signals -->
+    <div class="signals-area">
+        <div class="tab-bar">
+            <div class="tab active" onclick="switchTab('signals',this)">🔹 TÜM SİNYALLER <span class="cnt" id="cnt-signals">0</span></div>
+            <div class="tab" onclick="switchTab('core_signals',this)">🔵 CORE EDGE <span class="cnt" id="cnt-core">0</span></div>
+            <div class="tab" onclick="switchTab('swing_signals',this)">🟣 SWING EDGE <span class="cnt" id="cnt-swing">0</span></div>
+            <div class="tab" onclick="switchTab('sectors',this)">📊 SEKTÖRLER <span class="cnt" id="cnt-sectors">0</span></div>
+        </div>
+
+        <div class="table-wrap">
+            <!-- Sinyal tablosu -->
+            <table id="tbl-signals">
+                <thead>
+                    <tr>
+                        <th>Hisse</th>
+                        <th>Strateji</th>
+                        <th>Ağırlık</th>
+                        <th>Giriş</th>
+                        <th>Stop</th>
+                        <th>Hedef</th>
+                        <th>R/R</th>
+                        <th>RS</th>
+                        <th>RSI3</th>
+                        <th>Detay</th>
+                    </tr>
+                </thead>
+                <tbody id="body-signals"></tbody>
+            </table>
+
+            <!-- Sektör tablosu -->
+            <table id="tbl-sectors" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Sektör</th>
+                        <th>Değişim</th>
+                        <th>Hisse Sayısı</th>
+                    </tr>
+                </thead>
+                <tbody id="body-sectors"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right: detail -->
+    <div class="detail" id="detail-panel">
+        <div>
+            <div class="d-sym" id="d-sym">—</div>
+            <div class="d-price" id="d-price"></div>
+            <div class="d-type" id="d-type"></div>
+        </div>
+
+        <div class="signal-box none" id="d-box">SİNYAL SEÇİN</div>
+
+        <div class="trade-grid">
+            <div class="tg-item"><span class="tg-label">Giriş</span><b class="tg-val" id="d-entry">—</b></div>
+            <div class="tg-item"><span class="tg-label">Stop</span><b class="tg-val color-down" id="d-stop">—</b></div>
+            <div class="tg-item"><span class="tg-label">Hedef</span><b class="tg-val color-up" id="d-target">—</b></div>
+            <div class="tg-item"><span class="tg-label">R/R</span><b class="tg-val" id="d-rr">—</b></div>
+            <div class="tg-item"><span class="tg-label">RS</span><b class="tg-val" id="d-rs">—</b></div>
+            <div class="tg-item"><span class="tg-label">RSI3</span><b class="tg-val" id="d-rsi3">—</b></div>
+        </div>
+
+        <div>
+            <div class="detail-row"><span class="lbl">ATR</span><span id="d-atr">—</span></div>
+            <div class="detail-row"><span class="lbl">Sektör Güç</span><span id="d-sec">—</span></div>
+            <div class="detail-row"><span class="lbl">Sermaye Ağırlığı</span><span id="d-weight">—</span></div>
+        </div>
+
+        <div id="d-detail" style="font-size:11px; color:var(--text-dim); border:1px solid var(--border); padding:8px; border-radius:3px;">
+            Soldan bir sinyal seçin.
+        </div>
+    </div>
+</div>
+
+<script>
+    let data = null;
+    let activeTab = 'signals';
+    let ws = null;
+    let wsTimer = null;
+
+    const BACKEND = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? `http://${location.hostname}:${location.port || 8000}`
+        : location.origin;
+
+    // ── WebSocket ──────────────────────────────────────────────
+    function wsUrl() { return BACKEND.replace(/^http/, 'ws') + '/ws'; }
+
+    function setDot(state) {
+        const el = document.getElementById('ws-dot');
+        if (state === 'live')        { el.textContent = '● CANLI';       el.style.color = '#4ade80'; }
+        else if (state === 'conn')   { el.textContent = '○ BAĞLANIYOR';  el.style.color = '#fbbf24'; }
+        else                         { el.textContent = '✕ KESİLDİ';     el.style.color = '#f87171'; }
+    }
+
+    function connect() {
+        if (wsTimer) clearTimeout(wsTimer);
+        setDot('conn');
+        try { ws = new WebSocket(wsUrl()); } catch(e) { wsTimer = setTimeout(connect, 5000); return; }
+
+        ws.onmessage = e => {
+            try { data = JSON.parse(e.data); setDot('live'); render(); } catch(_) {}
+        };
+        ws.onclose = () => { setDot('disc'); wsTimer = setTimeout(connect, 5000); };
+        ws.onerror = () => setDot('disc');
+    }
+
+    // REST fallback
+    async function fetchRest() {
+        if (ws && ws.readyState === WebSocket.OPEN) return;
+        try {
+            const r = await fetch(BACKEND + '/api/status');
+            data = await r.json();
+            render();
+        } catch(_) {}
+    }
+
+    // ── Render ─────────────────────────────────────────────────
+    function render() {
+        if (!data) return;
+        const m = data.market || {};
+
+        // Header
+        const idx   = m.index_val || 0;
+        const chg   = m.change    || 0;
+        document.getElementById('h-idx').innerHTML =
+            `XU100: <b class="${chg>=0?'color-up':'color-down'}">${idx.toLocaleString('tr-TR')} (${chg>0?'+':''}${chg}%)</b>`;
+
+        // Market bar
+        document.getElementById('m-adv').textContent   = m.advancing  || 0;
+        document.getElementById('m-dec').textContent   = m.declining  || 0;
+        document.getElementById('m-unch').textContent  = m.unchanged  || 0;
+        document.getElementById('m-core').textContent  = (data.core_signals  || []).length;
+        document.getElementById('m-swing').textContent = (data.swing_signals || []).length;
+        document.getElementById('m-ts').textContent    = data.last_update || '--:--:--';
+
+        // Counts
+        document.getElementById('cnt-signals').textContent = (data.signals       || []).length;
+        document.getElementById('cnt-core').textContent    = (data.core_signals  || []).length;
+        document.getElementById('cnt-swing').textContent   = (data.swing_signals || []).length;
+        document.getElementById('cnt-sectors').textContent = (data.sectors       || []).length;
+
+        renderHeatmap();
+        renderTable();
+    }
+
+    // ── Heatmap ────────────────────────────────────────────────
+    function renderHeatmap() {
+        const all = data.signals || [];
+        const box = document.getElementById('heatmap');
+        box.innerHTML = '';
+        all.slice(0, 40).forEach(s => {
+            const isCore = s.setup === 'CORE_EDGE';
+            const div = document.createElement('div');
+            div.className = `hm-cell ${isCore ? 'core-cell' : 'swing-cell'}`;
+            div.innerHTML = `
+                <span class="hm-sym">${s.symbol}</span>
+                <span class="hm-pct ${s.rs >= 1 ? 'color-up' : 'color-down'}">RS ${s.rs}</span>
+                <span class="hm-type" style="color:${isCore?'var(--core-color)':'var(--swing-color)'}">
+                    ${isCore ? 'CORE' : 'SWING'}
+                </span>`;
+            div.onclick = () => selectSig(s);
+            box.appendChild(div);
+        });
+    }
+
+    // ── Tab Switch ──────────────────────────────────────────────
+    function switchTab(tab, el) {
+        activeTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        renderTable();
+    }
+
+    // ── Table ──────────────────────────────────────────────────
+    function renderTable() {
+        if (!data) return;
+
+        const isSectors = (activeTab === 'sectors');
+        document.getElementById('tbl-signals').style.display  = isSectors ? 'none' : 'table';
+        document.getElementById('tbl-sectors').style.display  = isSectors ? 'table' : 'none';
+
+        if (isSectors) {
+            renderSectors();
+            return;
+        }
+
+        const list = data[activeTab] || [];
+        const body = document.getElementById('body-signals');
+        body.innerHTML = '';
+
+        if (!list.length) {
+            body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-dim)">SİNYAL YOK</td></tr>`;
+            return;
+        }
+
+        list.forEach(s => {
+            const isCore = s.setup === 'CORE_EDGE';
+            const tr = document.createElement('tr');
+            tr.onclick = () => { document.querySelectorAll('tr').forEach(r=>r.classList.remove('sel')); tr.classList.add('sel'); selectSig(s); };
+            tr.innerHTML = `
+                <td style="font-weight:bold;color:var(--accent)">${s.symbol}</td>
+                <td><span class="${isCore?'tag-core':'tag-swing'}">${isCore?'CORE':'SWING'}</span></td>
+                <td class="w-pct">%${s.weight_pct}</td>
+                <td style="color:#fff">₺${s.entry}</td>
+                <td style="color:var(--danger)">₺${s.stop}</td>
+                <td style="color:var(--success)">₺${s.target}</td>
+                <td style="color:var(--warning)">${s.rr}x</td>
+                <td class="${s.rs>=1?'color-up':'color-down'}">${s.rs}</td>
+                <td class="${s.rsi3<30?'color-down':s.rsi3>70?'color-up':''}">${s.rsi3}</td>
+                <td style="color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.detail}</td>`;
+            body.appendChild(tr);
+        });
+    }
+
+    function renderSectors() {
+        const list = data.sectors || [];
+        const body = document.getElementById('body-sectors');
+        body.innerHTML = '';
+        const sorted = [...list].sort((a,b) => b.change - a.change);
+        sorted.forEach(s => {
+            const tr = document.createElement('tr');
+            const pct = Math.max(0, Math.min(100, 50 + s.change * 10));
+            tr.className = 'sector-bar';
+            tr.style.setProperty('--pct', pct + '%');
+            tr.innerHTML = `
+                <td style="font-weight:bold">${s.name}</td>
+                <td class="${s.change>=0?'color-up':'color-down'}" style="font-weight:bold">${s.change>0?'+':''}${s.change}%</td>
+                <td style="color:var(--text-dim)">${s.count} hisse</td>`;
+            body.appendChild(tr);
+        });
+    }
+
+    // ── Detail Panel ───────────────────────────────────────────
+    function selectSig(s) {
+        const isCore = s.setup === 'CORE_EDGE';
+        document.getElementById('d-sym').textContent  = s.symbol;
+        document.getElementById('d-price').textContent = s.entry ? `Giriş ₺${s.entry}` : '';
+        document.getElementById('d-type').innerHTML =
+            `<span class="${isCore?'tag-core':'tag-swing'}">${isCore?'CORE_EDGE':'SWING_EDGE'}</span>` +
+            ` <span class="w-pct">sermayenin %${s.weight_pct}'i</span>`;
+
+        const box = document.getElementById('d-box');
+        box.textContent = isCore ? '🔵 CORE EDGE — AL SİNYALİ' : '🟣 SWING EDGE — AL SİNYALİ';
+        box.className = `signal-box ${isCore?'core':'swing'}`;
+
+        document.getElementById('d-entry').textContent  = `₺${s.entry}`;
+        document.getElementById('d-stop').textContent   = `₺${s.stop}`;
+        document.getElementById('d-target').textContent = `₺${s.target}`;
+        document.getElementById('d-rr').textContent     = `${s.rr}x`;
+        document.getElementById('d-rs').textContent     = s.rs;
+        document.getElementById('d-rsi3').textContent   = s.rsi3;
+        document.getElementById('d-atr').textContent    = s.atr;
+        document.getElementById('d-sec').textContent    = `${s.sector_str}/100`;
+        document.getElementById('d-weight').textContent = `%${s.weight_pct}`;
+        document.getElementById('d-detail').textContent = s.detail || '—';
+    }
+
+    // ── Clock ──────────────────────────────────────────────────
+    function tick() {
+        const d = new Date();
+        document.getElementById('h-clock').textContent = d.toLocaleTimeString('tr-TR');
+        document.getElementById('h-date').textContent  = d.toLocaleDateString('tr-TR');
+    }
+
+    setInterval(tick, 1000);
+    setInterval(fetchRest, 30000);
+    connect();
+    tick();
+</script>
+</body>
+</html>
