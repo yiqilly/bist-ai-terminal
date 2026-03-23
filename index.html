@@ -284,9 +284,10 @@
     <!-- Left: signals -->
     <div class="signals-area">
         <div class="tab-bar">
-            <div class="tab active" onclick="switchTab('signals',this)">🔹 TÜM SİNYALLER <span class="cnt" id="cnt-signals">0</span></div>
+            <div class="tab active" onclick="switchTab('signals',this)">🔹 AL SİNYALLERİ <span class="cnt" id="cnt-signals">0</span></div>
             <div class="tab" onclick="switchTab('core_signals',this)">🔵 CORE EDGE <span class="cnt" id="cnt-core">0</span></div>
             <div class="tab" onclick="switchTab('swing_signals',this)">🟣 SWING EDGE <span class="cnt" id="cnt-swing">0</span></div>
+            <div class="tab" onclick="switchTab('watching',this)">👁 İZLENİYOR <span class="cnt" id="cnt-watch">0</span></div>
             <div class="tab" onclick="switchTab('sectors',this)">📊 SEKTÖRLER <span class="cnt" id="cnt-sectors">0</span></div>
         </div>
 
@@ -420,6 +421,7 @@
         document.getElementById('cnt-signals').textContent = (data.signals       || []).length;
         document.getElementById('cnt-core').textContent    = (data.core_signals  || []).length;
         document.getElementById('cnt-swing').textContent   = (data.swing_signals || []).length;
+        document.getElementById('cnt-watch').textContent   = (data.watching      || []).length;
         document.getElementById('cnt-sectors').textContent = (data.sectors       || []).length;
 
         renderHeatmap();
@@ -478,19 +480,25 @@
 
         list.forEach(s => {
             const isCore = s.setup === 'CORE_EDGE';
+            const isWatch = s.state === 'WATCHING' || s.state === 'CONFIRMING';
             const tr = document.createElement('tr');
             tr.onclick = () => { document.querySelectorAll('tr').forEach(r=>r.classList.remove('sel')); tr.classList.add('sel'); selectSig(s); };
+
+            const stateTag = isWatch
+                ? `<span style="font-size:9px;padding:2px 5px;background:#1e293b;color:${s.state==='CONFIRMING'?'#fbbf24':'#64748b'};border-radius:2px">${s.state_label}</span>`
+                : '';
+
             tr.innerHTML = `
-                <td style="font-weight:bold;color:var(--accent)">${s.symbol}</td>
+                <td style="font-weight:bold;color:var(--accent)">${s.symbol} ${stateTag}</td>
                 <td><span class="${isCore?'tag-core':'tag-swing'}">${isCore?'CORE':'SWING'}</span></td>
-                <td class="w-pct">%${s.weight_pct}</td>
-                <td style="color:#fff">₺${s.entry}</td>
-                <td style="color:var(--danger)">₺${s.stop}</td>
-                <td style="color:var(--success)">₺${s.target}</td>
-                <td style="color:var(--warning)">${s.rr}x</td>
+                <td class="w-pct">%${s.weight_pct||''}</td>
+                <td style="color:#fff">${s.entry?'₺'+s.entry:'—'}</td>
+                <td style="color:var(--danger)">${s.stop?'₺'+s.stop:'—'}</td>
+                <td style="color:var(--success)">${s.target?'₺'+s.target:'—'}</td>
+                <td style="color:var(--warning)">${s.rr?s.rr+'x':'—'}</td>
                 <td class="${s.rs>=1?'color-up':'color-down'}">${s.rs}</td>
                 <td class="${s.rsi3<30?'color-down':s.rsi3>70?'color-up':''}">${s.rsi3}</td>
-                <td style="color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.detail}</td>`;
+                <td style="color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.detail||s.met?.join(', ')||'—'}</td>`;
             body.appendChild(tr);
         });
     }

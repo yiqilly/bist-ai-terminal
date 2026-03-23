@@ -1,21 +1,30 @@
 # ============================================================
 # strategy/edge_multi.py — BIST v2 Edge Strateji Motoru
 #
+# STATE MACHINE (her sembol için):
+#
+#   IDLE ──(kısmi koşul)──► WATCHING
+#   WATCHING ──(tüm koşul)──► CONFIRMING
+#   CONFIRMING ──(1 bar teyit)──► SIGNAL  ← AL
+#   SIGNAL ──(koşul bozuldu)──► COOLDOWN
+#   COOLDOWN ──(N bar sonra)──► IDLE
+#
 # CORE_EDGE  → %80 sermaye, 1-30 gün tutma
-#   · RS > 1.15 (endeksi geçiyor)
-#   · Konsolidasyon (ATR dar, < %5)
-#   · Hacim sivri ucu (vol > 1.5x ortalama)
-#   · Durak: 2×ATR | Hedef: 5×ATR
+#   · Uptrend (EMA9 > EMA21)
+#   · RS > 1.15  (endeksi geçiyor)
+#   · Konsolidasyon (ATR/fiyat < %5)
+#   · Hacim spike (vol > 1.5× ortalama)
+#   Durak: 2×ATR | Hedef: 5×ATR
 #
 # SWING_EDGE → %20 sermaye, gün içi vur-kaç
 #   · RSI3 < 15 (aşırı satım zıplaması)
-#   · VEYA güçlü Gap-Up + RS > 1.05
-#   · Durak: 1×ATR | Hedef: 1.5×ATR
+#   · VEYA Gap-Up + RS > 1.05
+#   Durak: 1×ATR | Hedef: 1.5×ATR
 # ============================================================
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 
@@ -28,162 +37,263 @@ from config import (
 )
 
 
+# ── State ────────────────────────────────────────────────────
+
+class EdgeState(str, Enum):
+    IDLE       = "IDLE"        # Takipte değil
+    WATCHING   = "WATCHING"    # Kısmi koşullar sağlandı, izleniyor
+    CONFIRMING = "CONFIRMING"  # Tüm koşullar sağlandı, teyit bekleniyor
+    SIGNAL     = "SIGNAL"      # Onaylı AL sinyali
+    COOLDOWN   = "COOLDOWN"    # Sinyal sonrası bekleme
+
+
 class SetupType(str, Enum):
     NONE       = "NONE"
     CORE_EDGE  = "CORE_EDGE"
     SWING_EDGE = "SWING_EDGE"
 
 
+# ── Sinyal Modeli ────────────────────────────────────────────
+
 @dataclass
 class EdgeSignal:
-    symbol:      str
-    setup_type:  SetupType = SetupType.NONE
-    is_signal:   bool      = False
+    symbol:     str
+    state:      EdgeState = EdgeState.IDLE
+    setup_type: SetupType = SetupType.NONE
+    is_signal:  bool      = False   # sadece SIGNAL state'inde True
 
-    # Fiyat seviyeleri
-    entry:      float = 0.0
-    stop:       float = 0.0
-    target:     float = 0.0
-    daily_atr:  float = 0.0
-    rr_ratio:   float = 0.0
+    # Fiyat seviyeleri (SIGNAL anında dondurulur)
+    entry:     float = 0.0
+    stop:      float = 0.0
+    target:    float = 0.0
+    daily_atr: float = 0.0
+    rr_ratio:  float = 0.0
 
     # Meta
     rs_score:   float = 0.0
     rsi3:       float = 50.0
     sector_str: float = 0.0
+    weight:     float = 0.0
     detail:     str   = ""
 
-    # Pozisyon ağırlığı (sermayenin kaçı)
-    weight:     float = 0.0
-
+    # State sayaçları
+    _confirm_bars: int = field(default=0, repr=False)  # CONFIRMING'de geçirilen bar sayısı
+    _cooldown_bars: int = field(default=0, repr=False) # COOLDOWN'da geçirilen bar sayısı
     _date: Optional[date] = field(default=None, repr=False)
 
-    def reset(self):
-        self.is_signal  = False
-        self.setup_type = SetupType.NONE
-        self.entry = self.stop = self.target = 0.0
-        self.rr_ratio = 0.0
-        self.weight = 0.0
-        self.detail = ""
+    # Watchlist için kısmi koşul takibi
+    conditions_met:  list = field(default_factory=list)
+    conditions_miss: list = field(default_factory=list)
 
+    def set_state(self, new_state: EdgeState):
+        if self.state != new_state:
+            self.state = new_state
+            if new_state == EdgeState.CONFIRMING:
+                self._confirm_bars = 0
+            if new_state == EdgeState.COOLDOWN:
+                self._cooldown_bars = 0
+            if new_state in (EdgeState.IDLE, EdgeState.WATCHING):
+                self.is_signal = False
+
+    @property
+    def state_label(self) -> str:
+        labels = {
+            EdgeState.IDLE:       "—",
+            EdgeState.WATCHING:   "İZLENİYOR",
+            EdgeState.CONFIRMING: "TEYİT BEKLENİYOR",
+            EdgeState.SIGNAL:     "AL SİNYALİ",
+            EdgeState.COOLDOWN:   "BEKLEME",
+        }
+        return labels.get(self.state, self.state.value)
+
+
+# ── Strateji Motoru ──────────────────────────────────────────
 
 class EdgeMultiStrategy:
     """
-    CORE_EDGE + SWING_EDGE strateji motoru.
+    Her bar'da on_bar() çağrılır.
+    Sürekli takip + kademeli onay ile AL sinyali üretir.
 
-    Her 5 dakikalık barda on_bar() çağrılır.
-    Sinyal üretince EdgeSignal.is_signal = True döner.
+    CORE_EDGE öncelikli:
+      WATCHING  → uptrend + RS OK (kısmi)
+      CONFIRMING → tüm koşullar sağlandı
+      SIGNAL    → 1 bar teyit sonrası
+
+    SWING_EDGE:
+      CONFIRMING → koşul sağlandı (hız önemli, 1 bar yeterli)
+      SIGNAL    → aynı bar'da üretilir (hız kritik)
     """
+
+    COOLDOWN_BARS = 3   # SIGNAL sonrası kaç bar beklenir
 
     def __init__(self):
         self._signals: dict[str, EdgeSignal] = {}
+        self._buy_callbacks: list = []
 
     def on_bar(self, symbol: str, bar, ctx: dict) -> EdgeSignal:
-        """
-        bar: timestamp, open, high, low, close, volume alanları olan nesne
-        ctx: {
-            'rs_vs_index':    float,  # hisse / endeks göreli güç
-            'sector_strength': float, # sektör gücü (0-100)
-            'daily_atr':      float,  # günlük ATR
-            'rsi_3':          float,  # 3 günlük RSI
-            'ema9_daily':     float,
-            'ema21_daily':    float,
-            'vol_ma':         float,  # hacim ortalaması
-            'intraday_vol':   float,  # gün içi hacim
-            'vol_spike':      bool,
-            'gap_up':         bool,
-        }
-        """
         sig = self._get_or_create(symbol)
 
-        # Gün dönüşümünde sıfırla
+        # Gün dönüşümünde IDLE'a sıfırla
         bar_date = bar.timestamp.date()
         if sig._date and sig._date != bar_date:
-            sig.reset()
+            self._reset(sig)
         sig._date = bar_date
 
-        # Zaten sinyal verilmişse güncelleme
-        if sig.is_signal:
+        # Context
+        rs        = float(ctx.get("rs_vs_index", 1.0))
+        sec_str   = float(ctx.get("sector_strength", 50.0))
+        atr       = float(ctx.get("daily_atr", bar.close * 0.03))
+        rsi3      = float(ctx.get("rsi_3", 50.0))
+        e9        = float(ctx.get("ema9_daily", 0.0))
+        e21       = float(ctx.get("ema21_daily", 0.0))
+        vol_ma    = float(ctx.get("vol_ma", 1.0))
+        intra_vol = float(ctx.get("intraday_vol", bar.volume))
+        vol_spike = bool(ctx.get("vol_spike", False))
+        gap_up    = bool(ctx.get("gap_up", False))
+
+        # Meta her zaman güncellenir
+        sig.rs_score   = rs
+        sig.rsi3       = rsi3
+        sig.sector_str = sec_str
+
+        # ── COOLDOWN ──────────────────────────────────────────
+        if sig.state == EdgeState.COOLDOWN:
+            sig._cooldown_bars += 1
+            if sig._cooldown_bars >= self.COOLDOWN_BARS:
+                sig.set_state(EdgeState.IDLE)
             return sig
 
-        # ── Context ──────────────────────────────────────────
-        rs         = float(ctx.get("rs_vs_index", 0))
-        sec_str    = float(ctx.get("sector_strength", 0))
-        atr        = float(ctx.get("daily_atr", bar.close * 0.03))
-        rsi3       = float(ctx.get("rsi_3", 50))
-        e9         = float(ctx.get("ema9_daily", 0))
-        e21        = float(ctx.get("ema21_daily", 0))
-        vol_ma     = float(ctx.get("vol_ma", 0))
-        intra_vol  = float(ctx.get("intraday_vol", bar.volume))
-        vol_spike  = bool(ctx.get("vol_spike", False))
-        gap_up     = bool(ctx.get("gap_up", False))
+        # ── CORE koşul kontrolü ───────────────────────────────
+        is_uptrend  = (e9 > e21) if (e9 > 0 and e21 > 0) else True
+        is_rs_ok    = rs >= CORE_RS_THRESHOLD
+        is_consol   = (atr / bar.close) < CORE_CONSOLIDATION_THRESHOLD if bar.close > 0 else False
+        is_vol_ok   = (intra_vol > vol_ma * CORE_VOL_THRESHOLD) or vol_spike
 
-        # Trend filtresi — EMA9 > EMA21
-        is_uptrend = (e9 > e21) if (e9 > 0 and e21 > 0) else True
-        if not is_uptrend:
-            return sig
+        core_partial  = is_uptrend and is_rs_ok              # WATCHING için
+        core_all      = core_partial and is_consol and is_vol_ok  # CONFIRMING için
 
-        # ── CORE_EDGE (öncelikli) ─────────────────────────────
-        if rs >= CORE_RS_THRESHOLD:
-            is_consol  = (atr / bar.close) < CORE_CONSOLIDATION_THRESHOLD
-            is_vol_ok  = (intra_vol > vol_ma * CORE_VOL_THRESHOLD) or vol_spike
+        # Kriter listesi (UI için)
+        met, miss = [], []
+        (met if is_uptrend else miss).append("Uptrend")
+        (met if is_rs_ok   else miss).append(f"RS>{CORE_RS_THRESHOLD}")
+        (met if is_consol  else miss).append("Konsolidasyon")
+        (met if is_vol_ok  else miss).append("Hacim")
+        sig.conditions_met  = met
+        sig.conditions_miss = miss
 
-            if is_consol and is_vol_ok:
-                sig.is_signal  = True
+        # ── SWING koşul kontrolü ─────────────────────────────
+        swing_all = (rsi3 < SWING_RSI3_THRESHOLD) or (gap_up and rs > SWING_GAP_RS_THRESHOLD)
+
+        # ── State Machine ─────────────────────────────────────
+
+        if sig.state == EdgeState.IDLE or sig.state == EdgeState.WATCHING:
+
+            if core_all:
+                # Tüm CORE koşulları sağlandı → CONFIRMING
+                sig.set_state(EdgeState.CONFIRMING)
                 sig.setup_type = SetupType.CORE_EDGE
-                sig.entry      = bar.close
-                sig.stop       = bar.close - (atr * CORE_STOP_ATR)
-                sig.target     = bar.close + (atr * CORE_TARGET_ATR)
-                sig.daily_atr  = atr
-                sig.rs_score   = rs
-                sig.rsi3       = rsi3
-                sig.sector_str = sec_str
                 sig.weight     = CORE_WEIGHT
-                sig.rr_ratio   = round(CORE_TARGET_ATR / CORE_STOP_ATR, 2)
-                sig.detail     = (
-                    f"CORE EDGE | RS:{rs:.2f} | "
-                    f"ATR/P:{atr/bar.close*100:.1f}% | "
-                    f"Vol:{intra_vol/vol_ma:.1f}x"
-                ) if vol_ma > 0 else f"CORE EDGE | RS:{rs:.2f}"
+
+            elif swing_all and sig.state != EdgeState.WATCHING:
+                # SWING koşulu sağlandı → hemen CONFIRMING (1 bar yeterli)
+                sig.set_state(EdgeState.CONFIRMING)
+                sig.setup_type = SetupType.SWING_EDGE
+                sig.weight     = SWING_WEIGHT
+
+            elif core_partial:
+                # Kısmi koşul → WATCHING
+                if sig.state == EdgeState.IDLE:
+                    sig.set_state(EdgeState.WATCHING)
+                    sig.setup_type = SetupType.CORE_EDGE
+
+            else:
+                # Hiç koşul yok → IDLE'a dön
+                if sig.state == EdgeState.WATCHING:
+                    sig.set_state(EdgeState.IDLE)
+                    sig.setup_type = SetupType.NONE
+
+        elif sig.state == EdgeState.CONFIRMING:
+            sig._confirm_bars += 1
+
+            # Koşullar hâlâ sağlanıyor mu?
+            still_ok = (core_all if sig.setup_type == SetupType.CORE_EDGE else swing_all)
+
+            if not still_ok:
+                # Koşullar bozuldu → geri dön
+                sig.set_state(EdgeState.WATCHING if core_partial else EdgeState.IDLE)
                 return sig
 
-        # ── SWING_EDGE ─────────────────────────────────────────
-        is_swing = (rsi3 < SWING_RSI3_THRESHOLD) or (gap_up and rs > SWING_GAP_RS_THRESHOLD)
+            # 1 bar teyit sonrası → SIGNAL
+            if sig._confirm_bars >= 1:
+                sig.set_state(EdgeState.SIGNAL)
+                sig.is_signal = True
 
-        if is_swing:
-            sig.is_signal  = True
-            sig.setup_type = SetupType.SWING_EDGE
-            sig.entry      = bar.close
-            sig.stop       = bar.close - (atr * SWING_STOP_ATR)
-            sig.target     = bar.close + (atr * SWING_TARGET_ATR)
-            sig.daily_atr  = atr
-            sig.rs_score   = rs
-            sig.rsi3       = rsi3
-            sig.sector_str = sec_str
-            sig.weight     = SWING_WEIGHT
-            sig.rr_ratio   = round(SWING_TARGET_ATR / SWING_STOP_ATR, 2)
+                # Fiyat seviyelerini dondur
+                if sig.setup_type == SetupType.CORE_EDGE:
+                    sig.entry    = bar.close
+                    sig.stop     = bar.close - (atr * CORE_STOP_ATR)
+                    sig.target   = bar.close + (atr * CORE_TARGET_ATR)
+                    sig.rr_ratio = round(CORE_TARGET_ATR / CORE_STOP_ATR, 2)
+                    sig.detail   = (
+                        f"CORE EDGE | RS:{rs:.2f} | "
+                        f"ATR/P:{atr/bar.close*100:.1f}% | "
+                        f"Vol:{intra_vol/vol_ma:.1f}x"
+                    ) if vol_ma > 0 else f"CORE EDGE | RS:{rs:.2f}"
+                else:
+                    sig.entry    = bar.close
+                    sig.stop     = bar.close - (atr * SWING_STOP_ATR)
+                    sig.target   = bar.close + (atr * SWING_TARGET_ATR)
+                    sig.rr_ratio = round(SWING_TARGET_ATR / SWING_STOP_ATR, 2)
+                    sig.detail   = (
+                        f"SWING EDGE | RSI3:{rsi3:.1f} (aşırı satım)"
+                        if rsi3 < SWING_RSI3_THRESHOLD
+                        else f"SWING EDGE | Gap-Up + RS:{rs:.2f}"
+                    )
+                sig.daily_atr = atr
 
-            if rsi3 < SWING_RSI3_THRESHOLD:
-                sig.detail = f"SWING EDGE | RSI3:{rsi3:.1f} (aşırı satım)"
-            else:
-                sig.detail = f"SWING EDGE | Gap-Up + RS:{rs:.2f}"
-            return sig
+                # Callback
+                for cb in self._buy_callbacks:
+                    try: cb(sig)
+                    except Exception: pass
+
+        elif sig.state == EdgeState.SIGNAL:
+            # Sinyal aktif — koşullar bozulunca COOLDOWN
+            still_ok = (core_all if sig.setup_type == SetupType.CORE_EDGE else swing_all)
+            if not still_ok:
+                sig.is_signal = False
+                sig.set_state(EdgeState.COOLDOWN)
 
         return sig
 
     # ── Yardımcılar ──────────────────────────────────────────
 
-    def get_signals(self) -> list[EdgeSignal]:
-        return [s for s in self._signals.values() if s.is_signal]
-
-    def get_all(self) -> list[EdgeSignal]:
-        return list(self._signals.values())
-
-    def reset_day(self):
-        for s in self._signals.values():
-            s.reset()
+    def _reset(self, sig: EdgeSignal):
+        sig.state          = EdgeState.IDLE
+        sig.setup_type     = SetupType.NONE
+        sig.is_signal      = False
+        sig.entry = sig.stop = sig.target = 0.0
+        sig.weight = sig.rr_ratio = 0.0
+        sig.detail = ""
+        sig._confirm_bars  = 0
+        sig._cooldown_bars = 0
+        sig.conditions_met  = []
+        sig.conditions_miss = []
 
     def _get_or_create(self, sym: str) -> EdgeSignal:
         if sym not in self._signals:
             self._signals[sym] = EdgeSignal(symbol=sym)
         return self._signals[sym]
+
+    def on_buy_signal(self, cb):
+        self._buy_callbacks.append(cb)
+
+    def get_signals(self) -> list[EdgeSignal]:
+        return [s for s in self._signals.values() if s.is_signal]
+
+    def get_watching(self) -> list[EdgeSignal]:
+        return [s for s in self._signals.values()
+                if s.state in (EdgeState.WATCHING, EdgeState.CONFIRMING)]
+
+    def get_all_active(self) -> list[EdgeSignal]:
+        return [s for s in self._signals.values()
+                if s.state != EdgeState.IDLE]

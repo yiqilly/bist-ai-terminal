@@ -36,9 +36,10 @@ _state: dict = {
         "index_val": 0, "change": 0,
         "advancing": 0, "declining": 0, "unchanged": 0,
     },
-    "signals": [],      # BUY sinyalleri (CORE + SWING)
-    "core_signals": [], # sadece CORE_EDGE
-    "swing_signals": [],# sadece SWING_EDGE
+    "signals": [],       # BUY sinyalleri (CORE + SWING)
+    "core_signals": [],  # sadece CORE_EDGE
+    "swing_signals": [], # sadece SWING_EDGE
+    "watching": [],      # WATCHING + CONFIRMING (yaklaşan sinyaller)
     "sectors": [],
 }
 _state_lock  = threading.Lock()
@@ -77,19 +78,23 @@ def _index_fetch_loop():
 # ── Sinyal Serialize ──────────────────────────────────────────
 def _serialize_signal(sig) -> dict:
     return {
-        "symbol":    sig.symbol,
-        "setup":     sig.setup_type.value if hasattr(sig.setup_type, "value") else str(sig.setup_type),
-        "entry":     _f(sig.entry),
-        "stop":      _f(sig.stop),
-        "target":    _f(sig.target),
-        "rr":        _f(sig.rr_ratio, 1),
-        "atr":       _f(sig.daily_atr, 3),
-        "rs":        _f(sig.rs_score, 3),
-        "rsi3":      _f(sig.rsi3, 1),
-        "sector_str":_f(sig.sector_str, 1),
-        "weight_pct":int(sig.weight * 100),
-        "detail":    sig.detail,
-        "action":    "AL",
+        "symbol":     sig.symbol,
+        "setup":      sig.setup_type.value if hasattr(sig.setup_type, "value") else str(sig.setup_type),
+        "state":      sig.state.value if hasattr(sig.state, "value") else str(sig.state),
+        "state_label":getattr(sig, "state_label", ""),
+        "entry":      _f(sig.entry),
+        "stop":       _f(sig.stop),
+        "target":     _f(sig.target),
+        "rr":         _f(sig.rr_ratio, 1),
+        "atr":        _f(sig.daily_atr, 3),
+        "rs":         _f(sig.rs_score, 3),
+        "rsi3":       _f(sig.rsi3, 1),
+        "sector_str": _f(sig.sector_str, 1),
+        "weight_pct": int(sig.weight * 100),
+        "detail":     sig.detail,
+        "action":     "AL",
+        "met":        getattr(sig, "conditions_met",  []),
+        "miss":       getattr(sig, "conditions_miss", []),
     }
 
 
@@ -136,18 +141,17 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                 sector_strength_map[s["name"]] = strength
 
             # EdgeMultiStrategy'ye bar ver
-            all_signals_out  = []
-            core_signals_out = []
+            all_signals_out   = []
+            core_signals_out  = []
             swing_signals_out = []
+            watching_out      = []
 
             from data.sector_map import SYMBOL_SECTOR
             for sym, tick in snap.ticks.items():
-                # Bar nesnesini tick'ten oluştur
                 bar = _tick_to_bar(tick)
                 if bar is None:
                     continue
 
-                # Context oluştur — cache varsa indicator'larla zenginleştir
                 sec_name = SYMBOL_SECTOR.get(sym, "Diğer")
                 ctx = _build_ctx(tick, snap, sector_strength_map.get(sec_name, 50.0), cache, sym)
 
@@ -169,6 +173,9 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                             telegram.send_buy(sig)
                         except Exception:
                             pass
+
+                elif sig.state.value in ("WATCHING", "CONFIRMING"):
+                    watching_out.append(_serialize_signal(sig))
 
             # Piyasa özeti — cache'ten güvenilir change_pct al
             advancing = declining = unchanged = 0
@@ -196,6 +203,7 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                 _state["signals"]       = all_signals_out
                 _state["core_signals"]  = core_signals_out
                 _state["swing_signals"] = swing_signals_out
+                _state["watching"]      = watching_out
                 _state["sectors"]       = sectors_out
 
         except Exception as e:
