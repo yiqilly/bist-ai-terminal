@@ -336,6 +336,7 @@
             <div class="tab" onclick="switchTab('swing_signals',this)">🟣 SWING EDGE <span class="cnt" id="cnt-swing">0</span></div>
             <div class="tab" onclick="switchTab('watching',this)">👁 İZLENİYOR <span class="cnt" id="cnt-watch">0</span></div>
             <div class="tab" onclick="switchTab('sectors',this)">📊 SEKTÖRLER <span class="cnt" id="cnt-sectors">0</span></div>
+            <div class="tab" onclick="switchTab('news',this)">📰 HABERLER <span class="cnt" id="cnt-news">0</span></div>
         </div>
 
         <div class="table-wrap">
@@ -369,6 +370,19 @@
                 </thead>
                 <tbody id="body-sectors"></tbody>
             </table>
+
+            <!-- Haber tablosu -->
+            <table id="tbl-news" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Zaman</th>
+                        <th>Hisse</th>
+                        <th>Haber Başlığı</th>
+                        <th>Skor</th>
+                    </tr>
+                </thead>
+                <tbody id="body-news"></tbody>
+            </table>
         </div>
     </div>
 
@@ -397,7 +411,7 @@
             <div class="detail-row"><span class="lbl">Sermaye Ağırlığı</span><span id="d-weight">—</span></div>
         </div>
 
-        <div id="d-checklist" style="margin-top:15px;"></div>
+        <div id="d-checklist" style="margin-top:15px; font-size:11px; color:var(--text-dim); text-align:center;">📋 Teknik Özet için soldan sinyal seçin</div>
 
         <div id="d-detail" style="font-size:11px; color:var(--text-dim); border:1px solid var(--border); padding:8px; border-radius:3px; margin-top:10px;">
             Soldan bir sinyal seçin.
@@ -483,6 +497,9 @@
         document.getElementById('cnt-swing').textContent   = (data.swing_signals || []).length;
         document.getElementById('cnt-watch').textContent   = (data.watching      || []).length;
         document.getElementById('cnt-sectors').textContent = (data.sectors       || []).length;
+        if(document.getElementById('cnt-news')) {
+            document.getElementById('cnt-news').textContent = (data.news || []).length;
+        }
 
         renderHeatmap();
         renderTable();
@@ -531,11 +548,20 @@
         if (!data) return;
 
         const isSectors = (activeTab === 'sectors');
-        document.getElementById('tbl-signals').style.display  = isSectors ? 'none' : 'table';
+        const isNews = (activeTab === 'news');
+        document.getElementById('tbl-signals').style.display  = (isSectors || isNews) ? 'none' : 'table';
         document.getElementById('tbl-sectors').style.display  = isSectors ? 'table' : 'none';
+        
+        const tblNews = document.getElementById('tbl-news');
+        if (tblNews) tblNews.style.display = isNews ? 'table' : 'none';
 
         if (isSectors) {
             renderSectors();
+            return;
+        }
+        
+        if (isNews) {
+            renderNews();
             return;
         }
 
@@ -587,6 +613,33 @@
                 <td style="font-weight:bold">${s.name}</td>
                 <td class="${s.change>=0?'color-up':'color-down'}" style="font-weight:bold">${s.change>0?'+':''}${s.change}%</td>
                 <td style="color:var(--text-dim)">${s.count} hisse</td>`;
+            body.appendChild(tr);
+        });
+    }
+
+    function renderNews() {
+        const list = data.news || [];
+        const body = document.getElementById('body-news');
+        if (!body) return;
+        body.innerHTML = '';
+        
+        if (!list.length) {
+            body.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-dim)">YENİ HABER YOK</td></tr>`;
+            return;
+        }
+
+        list.forEach(n => {
+            const tr = document.createElement('tr');
+            let scoreColor = '';
+            let scoreIcon = '➖';
+            if (n.score > 0.4) { scoreColor = 'color-up'; scoreIcon = '🚀'; }
+            else if (n.score < -0.3) { scoreColor = 'color-down'; scoreIcon = '⚠️'; }
+            
+            tr.innerHTML = `
+                <td style="color:var(--text-dim)">${n.time}</td>
+                <td style="font-weight:bold;color:var(--accent)">${n.symbol}</td>
+                <td style="white-space:normal;max-width:400px;line-height:1.4">${n.headline}</td>
+                <td class="${scoreColor}" style="font-weight:bold">${scoreIcon} ${n.score}</td>`;
             body.appendChild(tr);
         });
     }

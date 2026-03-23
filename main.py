@@ -260,6 +260,28 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                 _state["watching"]      = watching_out
                 _state["heatmap"]       = heatmap_out
                 _state["sectors"]       = sectors_out
+                
+                news_out = []
+                if getattr(sys.modules[__name__], "news_engine", None):
+                    # modül seviyesinde news_engine var mi?
+                    ne = getattr(sys.modules[__name__], "news_engine")
+                    for n in getattr(ne, "get_news", lambda: [])()[:40]:
+                        news_out.append({
+                            "symbol": getattr(n, "symbol", ""),
+                            "headline": getattr(n, "headline", ""),
+                            "time": n.timestamp.strftime("%H:%M:%S") if hasattr(n, "timestamp") and n.timestamp else "",
+                            "score": getattr(n, "sentiment", 0.0),
+                        })
+                elif news_engine:
+                    # Arguman olarak gelen objeden cek
+                    for n in news_engine.get_news()[:40]:
+                        news_out.append({
+                            "symbol": getattr(n, "symbol", ""),
+                            "headline": getattr(n, "headline", ""),
+                            "time": n.timestamp.strftime("%H:%M:%S") if hasattr(n, "timestamp") and n.timestamp else "",
+                            "score": getattr(n, "sentiment", 0.0),
+                        })
+                _state["news"] = news_out
 
             if portfolio:
                 for sell_sym, reason in portfolio.check_exits(news_engine=news_engine):
