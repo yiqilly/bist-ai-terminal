@@ -100,7 +100,7 @@ def _serialize_signal(sig) -> dict:
 
 
 # ── Pipeline Loop ─────────────────────────────────────────────
-def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None):
+def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None):
     logger.info("Pipeline loop başlatıldı.")
 
     while True:
@@ -109,6 +109,9 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
             if snap is None:
                 time.sleep(1)
                 continue
+
+            if portfolio:
+                portfolio.update_prices(snap)
 
             # Sektörler
             try:
@@ -172,6 +175,8 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                         _notified.add(key)
                         try:
                             telegram.send_buy(sig)
+                            if portfolio:
+                                portfolio.open_position(sig)
                         except Exception:
                             pass
 
@@ -246,6 +251,13 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                 _state["watching"]      = watching_out
                 _state["heatmap"]       = heatmap_out
                 _state["sectors"]       = sectors_out
+
+            if portfolio:
+                for sell_sym, reason in portfolio.check_exits():
+                    try:
+                        telegram.send_sell(sell_sym, reason)
+                    except Exception as e:
+                        logger.error(f"SAT bildirimi hatasi ({sell_sym}): {e}")
 
         except Exception as e:
             logger.error(f"Pipeline hatası: {e}", exc_info=True)
@@ -459,6 +471,14 @@ async def startup_event():
     from strategy.edge_multi import EdgeMultiStrategy
     strategy = EdgeMultiStrategy()
 
+    # Portföy Tracker
+    try:
+        from portfolio.engine import PortfolioEngine
+        portfolio = PortfolioEngine()
+    except ImportError:
+        portfolio = None
+        logger.warning("PortfolioEngine yüklenemedi.")
+
     # Telegram
     from alerts.telegram import TelegramNotifier
     telegram = TelegramNotifier(
@@ -474,7 +494,7 @@ async def startup_event():
     # Pipeline
     threading.Thread(
         target=_pipeline_loop,
-        args=(bus, strategy, None, telegram, source, snap_cache),
+        args=(bus, strategy, portfolio, telegram, source, snap_cache),
         daemon=True,
         name="pipeline-loop",
     ).start()
