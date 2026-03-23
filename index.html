@@ -76,15 +76,17 @@
 
         /* ── Heatmap ── */
         .heatmap {
-            height: 110px;
+            height: 120px;
             background: #010409;
             border-bottom: 1px solid var(--border);
             display: grid;
-            grid-template-columns: repeat(20, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            grid-auto-rows: 58px;
             gap: 1px;
             padding: 1px;
             flex-shrink: 0;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         .hm-cell {
             display: flex;
@@ -246,9 +248,20 @@
             .market-bar { flex-wrap: wrap; height: auto; padding: 10px; gap: 10px; justify-content: center; }
             .mbar-item { margin-left: 0 !important; }
             
-            .heatmap { display: none; /* Mobilde yer kazanmak için heatmap gizlenebilir veya kaydırılabilir yapılabilir. Şimdilik gizli tutalım veya grid'i küçültelim. */ }
-            /* Veya heatmap'in taşmasına izin ver: */
-            /* .heatmap { grid-template-columns: repeat(20, minmax(20px, 1fr)); overflow-x: auto; height: 60px; } */
+            /* Heatmap yatay kaydırma */
+            .heatmap { 
+                display: flex; 
+                flex-wrap: nowrap; 
+                overflow-x: auto; 
+                overflow-y: hidden; 
+                height: 65px; 
+                gap: 2px;
+                padding-bottom: 5px; /* Kaydırma çubuğu payı */
+            }
+            .hm-cell { 
+                flex: 0 0 55px; 
+                height: 100%; 
+            }
 
             .workspace { display: flex; flex-direction: column; height: auto; overflow: visible; }
             .signals-area { border-right: none; border-bottom: 2px solid var(--border); overflow: visible; min-height: 300px; }
