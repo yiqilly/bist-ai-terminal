@@ -171,30 +171,41 @@ class EdgeMultiStrategy:
         is_consol   = (atr / bar.close) < CORE_CONSOLIDATION_THRESHOLD if bar.close > 0 else False
         is_vol_ok   = (intra_vol > vol_ma * CORE_VOL_THRESHOLD) or vol_spike
 
+        # Oyun Kurucu Swing Filtreleri
+        is_macro_uptrend = (e21 > 0) and (bar.close > e21) # Uzun vade trend kırılmamış olmalı
+
         core_partial  = is_uptrend and is_rs_ok              # WATCHING için
         core_all      = core_partial and is_consol and is_vol_ok  # CONFIRMING için
 
         # Kriter listesi (UI için)
         met, miss = [], []
         
-        # Eğer henüz IDLE/WATCHING ise genel tarama göster
-        if sig.state in (EdgeState.IDLE, EdgeState.WATCHING) or sig.setup_type == SetupType.CORE_EDGE:
+        # Sinyal zaten SWING_EDGE vb. olarak netleşmişse CORE kurallarını gösterme
+        if sig.setup_type not in (SetupType.SWING_EDGE, SetupType.NEWS_EDGE):
             (met if is_uptrend else miss).append("Uptrend")
             (met if is_rs_ok   else miss).append(f"RS>{CORE_RS_THRESHOLD}")
             (met if is_consol  else miss).append("Konsolidasyon")
             (met if is_vol_ok  else miss).append("Hacim")
             
-        if sig.setup_type == SetupType.SWING_EDGE or sig.state in (EdgeState.IDLE, EdgeState.WATCHING):
+        # Sinyal zaten CORE_EDGE vb. olarak netleşmişse SWING kurallarını gösterme
+        if sig.setup_type not in (SetupType.CORE_EDGE, SetupType.NEWS_EDGE):
+            (met if is_macro_uptrend else miss).append("Ana Trend Yukarı (Fiyat > EMA21)")
+            
             if rsi3 < SWING_RSI3_THRESHOLD:
-                met.append("Aşırı Satım Dip (RSI3)")
-            if gap_up and rs > SWING_GAP_RS_THRESHOLD:
-                met.append("Gap-Up Momentum")
+                met.append(f"Aşırı Satım Silkelemesi (RSI3 < {SWING_RSI3_THRESHOLD})")
+            else:
+                (met if (gap_up and rs > SWING_GAP_RS_THRESHOLD) else miss).append("Gap-Up Kopuşu")
                 
         sig.conditions_met  = met
         sig.conditions_miss = miss
 
         # ── SWING koşul kontrolü ─────────────────────────────
-        swing_all = (rsi3 < SWING_RSI3_THRESHOLD) or (gap_up and rs > SWING_GAP_RS_THRESHOLD)
+        # Smart Money (Oyun Kurucu) Mantığı: Düşen bıçak tutulmaz.
+        # Sadece ana trendi yukarı olan (is_macro_uptrend) hisselerdeki yapay silkelemeleri (RSI dip) veya Kopuşları (Gap-up) al.
+        swing_dip = (rsi3 < SWING_RSI3_THRESHOLD) and is_macro_uptrend
+        swing_gap = gap_up and (rs > SWING_GAP_RS_THRESHOLD) and is_macro_uptrend
+        
+        swing_all = swing_dip or swing_gap
 
         # ── State Machine ─────────────────────────────────────
 
