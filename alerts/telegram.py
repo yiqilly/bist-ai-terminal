@@ -29,22 +29,43 @@ class TelegramNotifier:
             logger.error(f"Telegram hatası: {e}")
 
     def send_buy(self, sig):
-        emoji = "🚀" if sig.setup_type == "CORE_EDGE" else "⚡"
+        emoji = "🔵" if "CORE" in str(sig.setup_type) else "🟣"
+        shield = "🛡" if "CORE" in str(sig.setup_type) else "⚡"
         weight_pct = int(sig.weight * 100)
         self.send(
-            f"{emoji} <b>AL SİNYALİ — {sig.symbol}</b>\n\n"
-            f"<b>Strateji:</b> {sig.setup_type} (%{weight_pct} ağırlık)\n"
-            f"<b>Giriş:</b> ₺{sig.entry:.2f}\n"
-            f"<b>Stop:</b> ₺{sig.stop:.2f}\n"
-            f"<b>Hedef:</b> ₺{sig.target:.2f}\n"
-            f"<b>R/R:</b> {sig.rr_ratio:.1f}x\n"
-            f"<b>Detay:</b> {sig.detail}\n"
-            f"<b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
+            f"{emoji} <b>BIST EDGE YENİ SİNYAL</b> {emoji}\n"
+            f"────────────────────\n"
+            f"📌 <b>Hisse:</b> #{sig.symbol}\n"
+            f"{shield} <b>Strateji:</b> {sig.setup_type} (Sermaye: %{weight_pct})\n\n"
+            f"📉 <b>Giriş Fiyatı:</b> ₺{sig.entry:.2f}\n"
+            f"🛑 <b>Zarar Kes:</b> ₺{sig.stop:.2f}\n"
+            f"🎯 <b>Kar Al Hedefi:</b> ₺{sig.target:.2f}\n\n"
+            f"⚖️ <b>Risk/Ödül:</b> {sig.rr_ratio:.1f}x\n"
+            f"📊 <b>Puanlar:</b> RSI(3): {sig.rsi3:.1f} | RS: {sig.rs_score:.2f}\n\n"
+            f"📝 <b>Analiz Notu:</b>\n"
+            f"<i>{getattr(sig, 'detail', '')}</i>\n\n"
+            f"⏱ <b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
+        )
+
+    def send_watch(self, sig):
+        state_val = sig.state.value if hasattr(sig.state, 'value') else sig.state
+        self.send(
+            f"👁 <b>İZLEMEYE ALINDI</b> 👁\n"
+            f"────────────────────\n"
+            f"📌 <b>Hisse:</b> #{sig.symbol}\n"
+            f"🔎 <b>Durum:</b> {state_val}\n"
+            f"🛡 <b>Strateji:</b> {sig.setup_type}\n\n"
+            f"💵 <b>Fiyat:</b> ₺{sig.entry:.2f}\n"
+            f"📊 <b>RS Puanı:</b> {sig.rs_score:.2f} | <b>RSI3:</b> {sig.rsi3:.1f}\n\n"
+            f"📝 <b>İzleme Sebebi:</b>\n<i>{getattr(sig, 'detail', '')}</i>\n\n"
+            f"⏱ <b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
         )
 
     def send_sell(self, symbol: str, reason: str):
         self.send(
-            f"⚠️ <b>SAT SİNYALİ — {symbol}</b>\n\n"
-            f"<b>Neden:</b> {reason}\n"
-            f"<b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
+            f"⚠️ <b>SAT SİNYALİ YAKALANDI</b> ⚠️\n"
+            f"────────────────────\n"
+            f"📌 <b>Hisse:</b> #{symbol}\n"
+            f"🛑 <b>Neden:</b> {reason}\n\n"
+            f"⏱ <b>Sinyal Zamanı:</b> {datetime.now().strftime('%H:%M:%S')}"
         )
