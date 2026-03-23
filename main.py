@@ -94,7 +94,7 @@ def _serialize_signal(sig) -> dict:
 
 
 # ── Pipeline Loop ─────────────────────────────────────────────
-def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label):
+def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None):
     logger.info("Pipeline loop başlatıldı.")
 
     while True:
@@ -110,10 +110,13 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label):
                 sector_counts: dict[str, list] = {}
                 for sym, tick in snap.ticks.items():
                     sec = SYMBOL_SECTOR.get(sym, "Diğer")
-                    sector_counts.setdefault(sec, []).append(
-                        (tick.price - tick.prev_close) / tick.prev_close * 100
-                        if getattr(tick, "prev_close", 0) > 0 else 0
-                    )
+                    # change_pct: cache'ten al (güvenilir), yoksa tick fiyatından hesapla
+                    chg = 0.0
+                    if cache:
+                        sc = cache._data.get(sym)
+                        if sc and sc.change_pct_reliable:
+                            chg = sc.change_pct
+                    sector_counts.setdefault(sec, []).append(chg)
                 sectors_out = []
                 for sec, changes in sorted(sector_counts.items()):
                     avg = sum(changes) / len(changes) if changes else 0
@@ -137,16 +140,16 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label):
             core_signals_out = []
             swing_signals_out = []
 
+            from data.sector_map import SYMBOL_SECTOR
             for sym, tick in snap.ticks.items():
                 # Bar nesnesini tick'ten oluştur
                 bar = _tick_to_bar(tick)
                 if bar is None:
                     continue
 
-                # Context oluştur
-                from data.sector_map import SYMBOL_SECTOR
+                # Context oluştur — cache varsa indicator'larla zenginleştir
                 sec_name = SYMBOL_SECTOR.get(sym, "Diğer")
-                ctx = _build_ctx(tick, snap, sector_strength_map.get(sec_name, 50.0))
+                ctx = _build_ctx(tick, snap, sector_strength_map.get(sec_name, 50.0), cache, sym)
 
                 sig = strategy.on_bar(sym, bar, ctx)
 
@@ -167,11 +170,17 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label):
                         except Exception:
                             pass
 
-            # Piyasa özeti
-            ticks = list(snap.ticks.values())
-            advancing  = sum(1 for t in ticks if getattr(t, "change_pct", 0) > 0)
-            declining  = sum(1 for t in ticks if getattr(t, "change_pct", 0) < 0)
-            unchanged  = len(ticks) - advancing - declining
+            # Piyasa özeti — cache'ten güvenilir change_pct al
+            advancing = declining = unchanged = 0
+            for sym in snap.ticks:
+                chg = 0.0
+                if cache:
+                    sc = cache._data.get(sym)
+                    if sc and sc.change_pct_reliable:
+                        chg = sc.change_pct
+                if chg > 0:   advancing += 1
+                elif chg < 0: declining += 1
+                else:         unchanged += 1
             market_out = {
                 "index_val":  _index_cache["val"],
                 "change":     _index_cache["change"],
@@ -202,46 +211,85 @@ def _tick_to_bar(tick):
         return None
 
     class _Bar:
-        def __init__(self, t):
+        def __init__(self, t, p):
             import datetime
             self.timestamp = datetime.datetime.now()
-            self.open  = getattr(t, "open",  price)
-            self.high  = getattr(t, "high",  price)
-            self.low   = getattr(t, "low",   price)
-            self.close = price
-            self.volume = getattr(t, "volume", 0)
+            self.open   = getattr(t, "open",  p)  or p
+            self.high   = getattr(t, "high",  p)  or p
+            self.low    = getattr(t, "low",   p)  or p
+            self.close  = p
+            self.volume = getattr(t, "volume", 0) or 0
 
-    return _Bar(tick)
+    return _Bar(tick, price)
 
 
-def _build_ctx(tick, snap, sector_strength: float) -> dict:
-    """Tick + snapshot'tan EdgeMultiStrategy context'i oluşturur."""
+def _build_ctx(tick, snap, sector_strength: float, cache=None, sym: str = "") -> dict:
+    """
+    Tick + SnapshotCache'ten EdgeMultiStrategy context'i oluşturur.
+    Cache varsa bar geçmişinden RSI3, EMA9/21, ATR hesaplar.
+    """
+    from strategy.indicator_engine import IndicatorEngine
+
     price  = getattr(tick, "price", 1) or 1
-    prev   = getattr(tick, "prev_close", None)
-    prev   = prev if (prev and prev > 0) else price  # None guard
     volume = getattr(tick, "volume", 0) or 0
-    vol_ma = getattr(tick, "vol_ma", None)
-    vol_ma = vol_ma if (vol_ma and vol_ma > 0) else (volume * 0.8 or 1)
 
-    # RS: hissenin gün değişimi / endeks değişimi
-    stock_ret   = (price - prev) / prev if prev > 0 else 0
-    index_ret   = (_index_cache["change"] or 0) / 100
-    rs_vs_index = 1 + stock_ret - index_ret
+    # ── SnapshotCache'ten sembol verisi al ────────────────────
+    sc = None
+    if cache and sym:
+        sc = cache._data.get(sym)
 
-    # ATR — snapshot'ta varsa al, yoksa %3 tahmin
-    atr = getattr(tick, "atr", None)
-    atr = atr if (atr and atr > 0) else price * 0.03
+    # prev_close
+    prev = (sc.prev_close if sc and sc.prev_close > 0 else None) or price
 
-    # RSI3, EMA9/21
-    rsi3  = getattr(tick, "rsi",  None) or 50.0
-    ema9  = getattr(tick, "ema9",  None) or 0.0
-    ema21 = getattr(tick, "ema21", None) or 0.0
+    # Gün değişimi
+    stock_chg_pct = (sc.change_pct if sc and sc.change_pct_reliable else
+                     (price - prev) / prev * 100 if prev > 0 else 0)
 
-    # Gap-Up: açılış bir önceki kapanışın %1.5+ üstündeyse
-    open_price = getattr(tick, "open", None) or price
-    gap_up = ((open_price - prev) / prev > 0.015) if prev > 0 else False
+    # RS vs endeks: 1 + (hisse%) - (endeks%) → normalize
+    index_chg_pct = _index_cache.get("change") or 0
+    rs_vs_index   = 1 + (stock_chg_pct - index_chg_pct) / 100
 
-    # Hacim spike: anlık hacim ortalamanın 2x üstü
+    # ── Bar geçmişinden indikatörler ─────────────────────────
+    atr   = price * 0.03   # fallback
+    rsi3  = 50.0
+    ema9  = 0.0
+    ema21 = 0.0
+    vol_ma = volume * 0.8 or 1
+    gap_up = False
+
+    if sc:
+        bars_1m = list(sc.bars.get("1m", []))
+        bars_5m = list(sc.bars.get("5m", []))
+        bars = bars_5m if len(bars_5m) >= 5 else bars_1m
+
+        if len(bars) >= 4:
+            closes  = [b.close for b in bars]
+            highs   = [b.high  for b in bars]
+            lows    = [b.low   for b in bars]
+            volumes = [b.volume for b in bars]
+
+            # RSI(3) — son 4 kapanış yeterli
+            rsi3 = IndicatorEngine.rsi(closes, period=min(3, len(closes)-1))
+
+            # EMA9 / EMA21
+            if len(closes) >= 9:
+                ema9  = IndicatorEngine.ema(closes, 9)
+            if len(closes) >= 21:
+                ema21 = IndicatorEngine.ema(closes, 21)
+
+            # ATR(14)
+            if len(closes) >= 2:
+                atr = IndicatorEngine.atr(highs, lows, closes, period=min(14, len(closes)-1))
+
+            # Vol MA (20 bar ort)
+            if len(volumes) >= 5:
+                vol_ma = sum(volumes[-20:]) / min(20, len(volumes))
+
+            # Gap-Up: ilk bar'ın open'ı prev_close'tan %1.5+ yüksek mi?
+            if bars and prev > 0:
+                gap_up = (bars[0].open - prev) / prev > 0.015
+
+    # Hacim spike
     vol_spike = (volume > vol_ma * 2) if vol_ma > 0 else False
 
     return {
@@ -329,6 +377,7 @@ async def startup_event():
     adapter = MockMarketDataAdapter(update_interval=999)
     bus     = MarketBus(adapter=adapter, snapshot_interval=1.0)
 
+    snap_cache = None
     try:
         cfg = {}
         try:
@@ -344,6 +393,7 @@ async def startup_event():
         ok = bridge.start(symbols=symbols)
         if ok:
             bus.attach_collector(bridge, bridge.cache)
+            snap_cache = bridge.cache
             logger.info(f"Collector: {bridge.collector.__class__.__name__}")
         else:
             raise RuntimeError("borsapy bağlanamadı")
@@ -373,7 +423,7 @@ async def startup_event():
     # Pipeline
     threading.Thread(
         target=_pipeline_loop,
-        args=(bus, strategy, None, telegram, source),
+        args=(bus, strategy, None, telegram, source, snap_cache),
         daemon=True,
         name="pipeline-loop",
     ).start()
