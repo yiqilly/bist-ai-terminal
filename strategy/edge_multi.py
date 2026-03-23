@@ -51,6 +51,8 @@ class SetupType(str, Enum):
     NONE       = "NONE"
     CORE_EDGE  = "CORE_EDGE"
     SWING_EDGE = "SWING_EDGE"
+    NEWS_EDGE  = "NEWS_EDGE"
+
 
 
 # ── Sinyal Modeli ────────────────────────────────────────────
@@ -174,10 +176,20 @@ class EdgeMultiStrategy:
 
         # Kriter listesi (UI için)
         met, miss = [], []
-        (met if is_uptrend else miss).append("Uptrend")
-        (met if is_rs_ok   else miss).append(f"RS>{CORE_RS_THRESHOLD}")
-        (met if is_consol  else miss).append("Konsolidasyon")
-        (met if is_vol_ok  else miss).append("Hacim")
+        
+        # Eğer henüz IDLE/WATCHING ise genel tarama göster
+        if sig.state in (EdgeState.IDLE, EdgeState.WATCHING) or sig.setup_type == SetupType.CORE_EDGE:
+            (met if is_uptrend else miss).append("Uptrend")
+            (met if is_rs_ok   else miss).append(f"RS>{CORE_RS_THRESHOLD}")
+            (met if is_consol  else miss).append("Konsolidasyon")
+            (met if is_vol_ok  else miss).append("Hacim")
+            
+        if sig.setup_type == SetupType.SWING_EDGE or sig.state in (EdgeState.IDLE, EdgeState.WATCHING):
+            if rsi3 < SWING_RSI3_THRESHOLD:
+                met.append("Aşırı Satım Dip (RSI3)")
+            if gap_up and rs > SWING_GAP_RS_THRESHOLD:
+                met.append("Gap-Up Momentum")
+                
         sig.conditions_met  = met
         sig.conditions_miss = miss
 
@@ -216,7 +228,13 @@ class EdgeMultiStrategy:
             sig._confirm_bars += 1
 
             # Koşullar hâlâ sağlanıyor mu?
-            still_ok = (core_all if sig.setup_type == SetupType.CORE_EDGE else swing_all)
+            if sig.setup_type == SetupType.CORE_EDGE:
+                still_ok = core_all
+            elif sig.setup_type == SetupType.SWING_EDGE:
+                still_ok = swing_all
+            else:
+                still_ok = True  # NEWS_EDGE veya diğer durumlar için geçici onay
+
 
             if not still_ok:
                 # Koşullar bozuldu → geri dön
@@ -258,7 +276,13 @@ class EdgeMultiStrategy:
 
         elif sig.state == EdgeState.SIGNAL:
             # Sinyal aktif — koşullar bozulunca COOLDOWN
-            still_ok = (core_all if sig.setup_type == SetupType.CORE_EDGE else swing_all)
+            if sig.setup_type == SetupType.CORE_EDGE:
+                still_ok = core_all
+            elif sig.setup_type == SetupType.SWING_EDGE:
+                still_ok = swing_all
+            else:
+                still_ok = True  # NEWS_EDGE için koşul bozulması portfolio/news_engine tarafından yapılır
+
             if not still_ok:
                 sig.is_signal = False
                 sig.set_state(EdgeState.COOLDOWN)

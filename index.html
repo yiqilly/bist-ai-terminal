@@ -238,6 +238,7 @@
         .color-up   { color: var(--success); }
         .color-down { color: var(--danger); }
         .color-warn { color: var(--warning); }
+        #btn-funds:hover { background: #0e3a4a; border-color: var(--accent); color: var(--accent); }
 
         /* ── Responsive / Mobil Uyumluluk ── */
         @media (max-width: 768px) {
@@ -416,6 +417,14 @@
         <div id="d-detail" style="font-size:11px; color:var(--text-dim); border:1px solid var(--border); padding:8px; border-radius:3px; margin-top:10px;">
             Soldan bir sinyal seçin.
         </div>
+
+        <div style="margin-top:15px; text-align:center;">
+            <button id="btn-funds" onclick="loadFundamentals()" style="background:#1e293b; color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:3px; cursor:pointer; font-size:10px; width:100%; transition:0.2s; display:none;">
+                📊 TEMEL ANALİZ YÜKLE
+            </button>
+        </div>
+        <div id="fundamentals-container" style="display:none; margin-top:10px; border-top:1px dashed var(--border); padding-top:10px; font-size:10px;">
+        </div>
     </div>
 </div>
 
@@ -529,7 +538,28 @@
             div.title = `${s.symbol} | ${s.sector} | ₺${s.price}`;
             div.onclick = () => {
                 const sig = (data.signals || []).find(x => x.symbol === s.symbol);
-                if (sig) selectSig(sig);
+                if (sig) {
+                    selectSig(sig);
+                } else {
+                    // Sinyal yoksa mock-up sinyal yarat ki Teknik Özet açılabilsin
+                    selectSig({
+                        symbol: s.symbol,
+                        setup: '-',
+                        state: 'IDLE',
+                        entry: null,
+                        weight_pct: 0,
+                        stop: '-',
+                        target: '-',
+                        rr: '-',
+                        rs: '-',
+                        rsi3: '-',
+                        atr: '-',
+                        sector_str: s.sector,
+                        detail: 'Şartları olgunlaşmadı.',
+                        met: s.met || [],
+                        miss: s.miss || []
+                    });
+                }
             };
             box.appendChild(div);
         });
@@ -668,6 +698,15 @@
         document.getElementById('d-weight').textContent = `%${s.weight_pct}`;
         document.getElementById('d-detail').textContent = s.detail || '—';
 
+        const fundsBtn = document.getElementById('btn-funds');
+        const fundsBox = document.getElementById('fundamentals-container');
+        if (fundsBtn && fundsBox) {
+            fundsBtn.style.display = 'block';
+            fundsBtn.textContent = '📊 TEMEL ANALİZ YÜKLE';
+            fundsBox.style.display = 'none';
+            fundsBox.innerHTML = '';
+        }
+
         const clDiv = document.getElementById('d-checklist');
         if (clDiv) {
             clDiv.innerHTML = "";
@@ -684,6 +723,67 @@
             }
             html += "</div>";
             clDiv.innerHTML = html;
+        }
+    }
+
+    // ── Fundamentals ──────────────────────────────────────────
+    let isFetchingFunds = false;
+
+    async function loadFundamentals() {
+        const sym = document.getElementById('d-sym').textContent;
+        if (!sym || sym === '—' || isFetchingFunds) return;
+
+        const btn = document.getElementById('btn-funds');
+        const box = document.getElementById('fundamentals-container');
+
+        isFetchingFunds = true;
+        btn.textContent = '⏳ VERİ ÇEKİLİYOR... (3-5 sn)';
+        box.style.display = 'block';
+        box.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:10px;">Bilanço ve mali tablolar indiriliyor...</div>';
+
+        try {
+            const r = await fetch(BACKEND + '/api/fundamentals/' + sym);
+            const data = await r.json();
+            
+            if (data.error) {
+                box.innerHTML = `<div style="color:var(--danger)">Hata: ${data.error}</div>`;
+                btn.textContent = '📊 TEMEL ANALİZ YÜKLE';
+                isFetchingFunds = false;
+                return;
+            }
+            
+            btn.style.display = 'none';
+
+            let html = `
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--accent);">KÜNYE</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:12px;">
+                    <div class="tg-item"><span class="tg-label">Piyasa Değeri</span><b style="font-size:10px;">${data.info?.marketCap ? (data.info.marketCap / 1e9).toFixed(1) + ' Milyar' : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">Sektör</span><b style="font-size:9px;">${data.info?.sector || '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">F/K</span><b style="font-size:11px;">${data.info?.trailingPE?.toFixed(2) || '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">PD/DD</span><b style="font-size:11px;">${data.info?.priceToBook?.toFixed(2) || '—'}</b></div>
+                </div>
+
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--success);">GELİR TABLOSU (Son Göstergeler)</div>
+                <table style="width:100%;font-size:9px;margin-bottom:12px;border-collapse:collapse;">
+                    ${(data.income_stmt||[]).map(x => `<tr><td style="padding:4px 2px;color:var(--text-dim); border-bottom:1px solid #1e293b;">${x.item.substring(0,30)}</td><td style="text-align:right;border-bottom:1px solid #1e293b;">${x.value}</td></tr>`).join('')}
+                </table>
+
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--warning);">BİLANÇO VAZİYETİ (Son Göstergeler)</div>
+                <table style="width:100%;font-size:9px;margin-bottom:12px;border-collapse:collapse;">
+                    ${(data.balance_sheet||[]).map(x => `<tr><td style="padding:4px 2px;color:var(--text-dim);border-bottom:1px solid #1e293b;">${x.item.substring(0,30)}</td><td style="text-align:right;border-bottom:1px solid #1e293b;">${x.value}</td></tr>`).join('')}
+                </table>
+            `;
+
+            if (data.info?.dividendYield) {
+                html += `<div style="color:var(--success);margin-top:10px;text-align:center;font-weight:bold;border:1px dashed var(--success);padding:5px;">Temettü Verimi: %${(data.info.dividendYield*100).toFixed(2)}</div>`;
+            }
+
+            box.innerHTML = html;
+        } catch(e) {
+            box.innerHTML = `<div style="color:var(--danger)">Bağlantı hatası: ${e}</div>`;
+            btn.textContent = '📊 TEMEL ANALİZ YÜKLE';
+        } finally {
+            isFetchingFunds = false;
         }
     }
 

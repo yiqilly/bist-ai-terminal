@@ -165,8 +165,20 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                 state_val = getattr(sig.state, "value", str(sig.state))
                 if not getattr(sig, "is_signal", False) and state_val in ("WATCHING", "CONFIRMING"):
                     if news_engine and news_engine.has_positive_news(sym):
+                        from strategy.edge_multi import EdgeState, SetupType
+                        sig.set_state(EdgeState.SIGNAL)
                         sig.is_signal = True
-                        sig.setup_type = "NEWS_EDGE"
+                        sig.setup_type = SetupType.NEWS_EDGE
+                        
+                        atr = float(ctx.get("daily_atr", getattr(bar, "close", 1.0) * 0.03))
+                        price = getattr(bar, "close", 1.0)
+                        sig.entry    = price
+                        sig.stop     = price - (atr * 1.5)
+                        sig.target   = price + (atr * 3.0)
+                        sig.rr_ratio = 2.0
+                        sig.daily_atr = atr
+                        sig.weight   = 20.0  # SWING ağırlığı varsayılan
+                        
                         sig.detail = "🚀 ACİL ALIM: Sentiment Skoru Yüksek (Haber Tetiklemesi)"
 
                 if getattr(sig, "is_signal", False):
@@ -246,11 +258,14 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                         if sc2 and sc2.change_pct_reliable:
                             chg = sc2.change_pct
                     from data.sector_map import SYMBOL_SECTOR
+                    sig = strategy._signals.get(sym) if strategy else None
                     heatmap_out.append({
                         "symbol": sym,
                         "price":  _f(price),
                         "change": _f(chg),
                         "sector": SYMBOL_SECTOR.get(sym, "Diğer"),
+                        "met": getattr(sig, "conditions_met", []) if sig else [],
+                        "miss": getattr(sig, "conditions_miss", []) if sig else []
                     })
                 heatmap_out.sort(key=lambda x: x["change"], reverse=True)
 
@@ -426,6 +441,59 @@ async def get_status():
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "last_update": _state.get("last_update")}
+
+
+def _fmt_large_num(val):
+    try:
+        f = float(val)
+        if abs(f) >= 1_000_000_000: return f"{f/1_000_000_000:.2f} Milyar"
+        if abs(f) >= 1_000_000:     return f"{f/1_000_000:.2f} Milyon"
+        if abs(f) >= 1_000:         return f"{f/1_000:.2f} Bin"
+        return str(round(f, 2))
+    except (ValueError, TypeError):
+        return str(val)
+
+@app.get("/api/fundamentals/{symbol}")
+async def api_fundamentals(symbol: str):
+    import borsapy
+    try:
+        t = borsapy.Ticker(symbol)
+        
+        info_dict = dict(t.info) if hasattr(t.info, "keys") else {}
+            
+        bs_list = []
+        bs = t.balance_sheet
+        if bs is not None and not bs.empty:
+            col = bs.columns[0]
+            for idx, val in bs.head(10)[col].items():
+                bs_list.append({"item": str(idx).strip(), "value": _fmt_large_num(val)})
+                
+        inc_list = []
+        inc = t.income_stmt
+        if inc is not None and not inc.empty:
+            col = inc.columns[0]
+            for idx, val in inc.head(10)[col].items():
+                inc_list.append({"item": str(idx).strip(), "value": _fmt_large_num(val)})
+
+        holders = []
+        hm = t.major_holders
+        if hm is not None and not hm.empty:
+            for idx, row in hm.head(10).iterrows():
+                # NaN degerleri bos dizeye cevir
+                clean_row = {str(k): (str(v) if str(v) != 'nan' else '') for k, v in row.items()}
+                holders.append(clean_row)
+        
+        return {
+            "symbol": symbol,
+            "info": info_dict,
+            "balance_sheet": bs_list,
+            "income_stmt": inc_list,
+            "major_holders": holders
+        }
+    except Exception as e:
+        logger.error(f"Fundamentals error for {symbol}: {e}")
+        return {"error": str(e)}
+
 
 
 @app.websocket("/ws")
