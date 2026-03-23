@@ -100,7 +100,7 @@ def _serialize_signal(sig) -> dict:
 
 
 # ── Pipeline Loop ─────────────────────────────────────────────
-def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None):
+def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None, news_engine=None):
     logger.info("Pipeline loop başlatıldı.")
 
     while True:
@@ -161,10 +161,19 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None)
 
                 sig = strategy.on_bar(sym, bar, ctx)
 
-                if sig.is_signal:
+                # Çok İyi Haber (AL) Tetikleyicisi
+                state_val = getattr(sig.state, "value", str(sig.state))
+                if not getattr(sig, "is_signal", False) and state_val in ("WATCHING", "CONFIRMING"):
+                    if news_engine and news_engine.has_positive_news(sym):
+                        sig.is_signal = True
+                        sig.setup_type = "NEWS_EDGE"
+                        sig.detail = "🚀 ACİL ALIM: Sentiment Skoru Yüksek (Haber Tetiklemesi)"
+
+                if getattr(sig, "is_signal", False):
                     s = _serialize_signal(sig)
                     all_signals_out.append(s)
-                    if "CORE" in sig.setup_type.value:
+                    setup_val = getattr(sig.setup_type, "value", str(sig.setup_type))
+                    if "CORE" in setup_val:
                         core_signals_out.append(s)
                     else:
                         swing_signals_out.append(s)
@@ -253,7 +262,7 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None)
                 _state["sectors"]       = sectors_out
 
             if portfolio:
-                for sell_sym, reason in portfolio.check_exits():
+                for sell_sym, reason in portfolio.check_exits(news_engine=news_engine):
                     try:
                         telegram.send_sell(sell_sym, reason)
                     except Exception as e:
@@ -471,6 +480,14 @@ async def startup_event():
     from strategy.edge_multi import EdgeMultiStrategy
     strategy = EdgeMultiStrategy()
 
+    # Haber Motoru
+    try:
+        from news.news_engine import NewsEngine
+        news_engine = NewsEngine()
+    except ImportError:
+        news_engine = None
+        logger.warning("NewsEngine yüklenemedi.")
+
     # Portföy Tracker
     try:
         from portfolio.engine import PortfolioEngine
@@ -494,7 +511,7 @@ async def startup_event():
     # Pipeline
     threading.Thread(
         target=_pipeline_loop,
-        args=(bus, strategy, portfolio, telegram, source, snap_cache),
+        args=(bus, strategy, portfolio, telegram, source, snap_cache, news_engine),
         daemon=True,
         name="pipeline-loop",
     ).start()

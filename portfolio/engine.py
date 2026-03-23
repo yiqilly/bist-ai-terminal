@@ -86,14 +86,18 @@ class PortfolioEngine:
         logger.info(f"PORTFOY ALIMI: {sig.symbol} | Fiyat: ₺{sig.entry} | Adet: {qty} | Kalan Kasa: ₺{self.cash:,.2f}")
         return True
 
-    def check_exits(self) -> list[tuple[str, str]]:
-        """Pozisyonlari Stop-Loss ve Take-Profit acisindan kontrol eder. SAT sinyallerini dondurur."""
+    def check_exits(self, news_engine=None) -> list[tuple[str, str]]:
+        """Pozisyonlari Stop-Loss, Take-Profit ve Acil Kötü Haber acisindan kontrol eder. SAT sinyallerini dondurur."""
         sells = []
         to_remove = []
         
         for symbol, pos in self.positions.items():
             reason = ""
-            if pos.current_price <= pos.stop_loss:
+            
+            # Acil Kötü Haber Çıkışı
+            if news_engine and news_engine.has_negative_news(symbol):
+                reason = "PANİK SATIŞI (Çok Kötü Haber Saptandı!)"
+            elif pos.current_price <= pos.stop_loss:
                 reason = f"STOP LOSS (veya İzleyen Stop) Tetiklendi! Fiyat: ₺{pos.current_price:.2f} <= Stop: ₺{pos.stop_loss:.2f}"
             elif pos.current_price >= pos.take_profit:
                 reason = f"KAR AL (Target) Hedefine Ulaşıldı! Fiyat: ₺{pos.current_price:.2f} >= Hedef: ₺{pos.take_profit:.2f}"

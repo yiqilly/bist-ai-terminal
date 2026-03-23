@@ -394,10 +394,12 @@
         <div>
             <div class="detail-row"><span class="lbl">ATR</span><span id="d-atr">—</span></div>
             <div class="detail-row"><span class="lbl">Sektör Güç</span><span id="d-sec">—</span></div>
-            <div class="detail-row"><span class="lbl">Sermaye Ağırlığı</span><span id="d-weight">—</span></div>
-        </div>
+                    <div class="d-box"><span>Sektör</span><span id="d-sec" class="v-val">-</span></div>
+                </div>
 
-        <div id="d-detail" style="font-size:11px; color:var(--text-dim); border:1px solid var(--border); padding:8px; border-radius:3px;">
+        <div id="d-checklist" style="margin-top:15px;"></div>
+
+        <div id="d-detail" style="font-size:11px; color:var(--text-dim); border:1px solid var(--border); padding:8px; border-radius:3px; margin-top:10px;">
             Soldan bir sinyal seçin.
         </div>
     </div>
@@ -612,6 +614,24 @@
         document.getElementById('d-sec').textContent    = `${s.sector_str}/100`;
         document.getElementById('d-weight').textContent = `%${s.weight_pct}`;
         document.getElementById('d-detail').textContent = s.detail || '—';
+
+        const clDiv = document.getElementById('d-checklist');
+        if (clDiv) {
+            clDiv.innerHTML = "";
+            let html = "<div style='font-size:11px;font-weight:bold;margin-bottom:8px;color:rgba(0,210,255,0.8);'>TEKNİK ÖZET</div><div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;'>";
+            if(s.met && s.met.length > 0) {
+                s.met.forEach(c => {
+                    html += `<div style="background:rgba(0,255,100,0.1); border:1px solid var(--up); padding:4px 6px; border-radius:4px; font-size:10px;"><span style="color:var(--up);">✔️</span> ${c} Uygun</div>`;
+                });
+            }
+            if(s.miss && s.miss.length > 0) {
+                s.miss.forEach(c => {
+                    html += `<div style="background:rgba(255,0,50,0.1); border:1px solid var(--down); padding:4px 6px; border-radius:4px; font-size:10px;"><span style="color:var(--down);">❌</span> ${c} Değil</div>`;
+                });
+            }
+            html += "</div>";
+            clDiv.innerHTML = html;
+        }
     }
 
     // ── Clock ──────────────────────────────────────────────────
