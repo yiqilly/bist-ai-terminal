@@ -23,18 +23,18 @@ BIST50_EXTRA: list[str] = [
 ]
 BIST50: list[str] = BIST30 + BIST50_EXTRA
 
-# BIST100 = BIST50 + 50 ek sembol (temsili, genişletilebilir)
+# BIST100 = BIST50 + 50 ek sembol
 BIST100_EXTRA: list[str] = [
-    "ADEL", "ADNAC", "AGHOL", "AKMGY", "AKSA",
-    "ANACM", "ANHYT", "ANSGR", "ARKAS", "AYGAZ",
-    "BAGFS", "BANVT", "BERA", "BIOEN", "BIZIM",
-    "BMEKS", "BORSK", "BRYAT", "BUCIM", "CANTE",
-    "CEMTS", "CIMSA", "CLEBI", "DOAS", "DOCO",
-    "ECZYT", "EGEEN", "EMKEL", "ESEN", "EUPWR",
-    "FLAP", "FMIZP", "GLYHO", "GOLTS", "GOZDE",
-    "HEKTS", "HLGYO", "HUNER", "INDES", "IPEKE",
-    "ISCTR", "ISGYO", "ISMEN", "IZFAS", "JANTS",
+    "ADEL",  "AGHOL", "AKMGY", "AKSA",  "AKGRT",
+    "ANHYT", "ANSGR", "AYGAZ", "BAGFS", "BANVT",
+    "BERA",  "BIOEN", "BIZIM", "BORSK", "BRYAT",
+    "BUCIM", "CEMTS", "CIMSA", "CLEBI", "DOAS",
+    "ECZYT", "EGEEN", "EMKEL", "EUPWR", "GLYHO",
+    "GOLTS", "GOZDE", "HEKTS", "HLGYO", "INDES",
+    "IPEKE", "ISGYO", "ISMEN", "IZFAS", "JANTS",
     "KARSN", "KATMR", "KAYSE", "KERVT", "KORDS",
+    "NETAS", "PRKAB", "REEDR", "SELVA", "TURSG",
+    "VESTL", "ZOREN", "CANTE", "DOCO",  "FLAP",
 ]
 BIST100: list[str] = BIST50 + BIST100_EXTRA
 
