@@ -1,86 +1,113 @@
 # ============================================================
 # data/symbols.py — BIST Sembol Evrenler
-# BIST30 | BIST50 | BIST100 altyapısı
-# Varsayılan: BIST30
+# Gerçek liste borsapy Index('XU100').component_symbols'dan alındı
 # ============================================================
 from config import UNIVERSE
 
+# Gerçek BIST100 bileşenleri (borsapy'den)
+BIST100: list[str] = [
+    "AEFES", "AGHOL", "AKBNK", "AKSA",  "AKSEN",
+    "ALARK", "ALTNY", "ANSGR", "ARCLK", "ASELS",
+    "ASTOR", "BALSU", "BIMAS", "BRSAN", "BRYAT",
+    "BSOKE", "BTCIM", "CANTE", "CCOLA", "CIMSA",
+    "CWENE", "DAPGM", "DOAS",  "DOHOL", "DSTKF",
+    "ECILC", "EFOR",  "EGEEN", "EKGYO", "ENERY",
+    "ENJSA", "ENKAI", "EREGL", "EUPWR", "FENER",
+    "FROTO", "GARAN", "GENIL", "GESAN", "GLRMK",
+    "GRSEL", "GRTHO", "GSRAY", "GUBRF", "HALKB",
+    "HEKTS", "ISCTR", "ISMEN", "IZENR", "KCAER",
+    "KCHOL", "KLRHO", "KONTR", "KRDMD", "KTLEV",
+    "KUYAS", "MAGEN", "MAVI",  "MGROS", "MIATK",
+    "MPARK", "OBAMS", "ODAS",  "OTKAR", "OYAKC",
+    "PASEU", "PATEK", "PETKM", "PGSUS", "QUAGR",
+    "RALYH", "REEDR", "SAHOL", "SASA",  "SISE",
+    "SKBNK", "SOKM",  "TABGD", "TAVHL", "TCELL",
+    "THYAO", "TKFEN", "TOASO", "TRALT", "TRENJ",
+    "TRMET", "TSKB",  "TSPOR", "TTKOM", "TTRAK",
+    "TUKAS", "TUPRS", "TUREX", "TURSG", "ULKER",
+    "VAKBN", "VESTL", "YEOTK", "YKBNK", "ZOREN",
+]
+
+# BIST30 ve BIST50 — geriye dönük uyumluluk
 BIST30: list[str] = [
     "AKBNK", "ARCLK", "ASELS", "BIMAS", "DOHOL",
     "EKGYO", "EREGL", "FROTO", "GARAN", "GUBRF",
-    "HALKB", "ISCTR", "KCHOL", "KOZAA", "KOZAL",
-    "KRDMD", "MGROS", "ODAS",  "PETKM", "PGSUS",
-    "SAHOL", "SASA",  "SISE",  "SOKM",  "TAVHL",
-    "TCELL", "THYAO", "TKFEN", "TOASO", "TUPRS",
+    "HALKB", "ISCTR", "KCHOL", "KRDMD", "MGROS",
+    "ODAS",  "PETKM", "PGSUS", "SAHOL", "SASA",
+    "SISE",  "SOKM",  "TAVHL", "TCELL", "THYAO",
+    "TKFEN", "TOASO", "TUPRS", "VAKBN", "YKBNK",
 ]
 
-# BIST50 = BIST30 + 20 ek sembol
-BIST50_EXTRA: list[str] = [
-    "AKSEN", "ALARK", "AEFES", "ALFAS", "BRISA",
-    "CCOLA", "ENKAI", "IHLGM", "LOGO",  "MAVI",
-    "OTKAR", "OYAKC", "PRKME", "SKBNK", "TSKB",
-    "TTKOM", "ULKER", "VAKBN", "VESBE", "YKBNK",
+BIST50: list[str] = BIST30 + [
+    "AEFES", "AKSEN", "ALARK", "CCOLA", "CIMSA",
+    "DOAS",  "ENKAI", "MAVI",  "OTKAR", "OYAKC",
+    "SKBNK", "TSKB",  "TTKOM", "ULKER", "VESTL",
+    "BRYAT", "HEKTS", "ISMEN", "TUPRS", "ZOREN",
 ]
-BIST50: list[str] = BIST30 + BIST50_EXTRA
 
-# BIST100 = BIST50 + 50 ek sembol
-BIST100_EXTRA: list[str] = [
-    "ADEL",  "AGHOL", "AKMGY", "AKSA",  "AKGRT",
-    "ANHYT", "ANSGR", "AYGAZ", "BAGFS", "BANVT",
-    "BERA",  "BIOEN", "BIZIM", "BORSK", "BRYAT",
-    "BUCIM", "CEMTS", "CIMSA", "CLEBI", "DOAS",
-    "ECZYT", "EGEEN", "EMKEL", "EUPWR", "GLYHO",
-    "GOLTS", "GOZDE", "HEKTS", "HLGYO", "INDES",
-    "IPEKE", "ISGYO", "ISMEN", "IZFAS", "JANTS",
-    "KARSN", "KATMR", "KAYSE", "KERVT", "KORDS",
-    "NETAS", "PRKAB", "REEDR", "SELVA", "TURSG",
-    "VESTL", "ZOREN", "CANTE", "DOCO",  "FLAP",
-]
-BIST100: list[str] = BIST50 + BIST100_EXTRA
-
-# Aktif evren — config'e göre seçilir
 _UNIVERSES = {"BIST30": BIST30, "BIST50": BIST50, "BIST100": BIST100}
-ACTIVE_UNIVERSE: list[str] = _UNIVERSES.get(UNIVERSE, BIST30)
+ACTIVE_UNIVERSE: list[str] = _UNIVERSES.get(UNIVERSE, BIST100)
 
 def get_universe(name: str | None = None) -> list[str]:
-    """Config veya parametre ile evren seç."""
-    return _UNIVERSES.get(name or UNIVERSE, BIST30)
+    return _UNIVERSES.get(name or UNIVERSE, BIST100)
 
-# Sektör mapping (BIST30 + ek semboller)
+
+# Sektör mapping
 SECTOR_MAP: dict[str, str] = {
-    "AKBNK": "Bankacılık",  "GARAN": "Bankacılık",
-    "HALKB": "Bankacılık",  "ISCTR": "Bankacılık",
-    "VAKBN": "Bankacılık",  "YKBNK": "Bankacılık",
-    "TSKB":  "Bankacılık",  "SKBNK": "Bankacılık",
-    "FROTO": "Otomotiv",    "TOASO": "Otomotiv",
-    "OTKAR": "Otomotiv",
-    "ARCLK": "Beyaz Eşya",  "VESBE": "Beyaz Eşya",
-    "BIMAS": "Perakende",   "MGROS": "Perakende",
-    "SOKM":  "Perakende",   "MAVI":  "Perakende",
-    "ULKER": "Gıda",        "CCOLA": "Gıda",
-    "AEFES": "Gıda",        "BANVT": "Gıda",
-    "THYAO": "Havacılık",   "PGSUS": "Havacılık",
-    "TAVHL": "Havacılık",   "CLEBI": "Havacılık",
-    "TCELL": "Telekom",     "TTKOM": "Telekom",
-    "TUPRS": "Enerji",      "AKSEN": "Enerji",
-    "ODAS":  "Enerji",      "AYGAZ": "Enerji",
-    "PETKM": "Petrokimya",  "SASA":  "Kimya",
-    "EREGL": "Demir-Çelik", "KRDMD": "Demir-Çelik",
-    "OYAKC": "Demir-Çelik",
-    "ASELS": "Savunma",
-    "KCHOL": "Holding",     "SAHOL": "Holding",
-    "DOHOL": "Holding",     "ENKAI": "Holding",
-    "SISE":  "Cam",         "ANACM": "Cam",
-    "EKGYO": "GYO",         "ISGYO": "GYO",
-    "HLGYO": "GYO",         "AKMGY": "GYO",
-    "KOZAL": "Madencilik",  "KOZAA": "Madencilik",
-    "GUBRF": "Gübre",       "BAGFS": "Gübre",
-    "TKFEN": "İnşaat",      "CIMSA": "İnşaat",
-    "BUCIM": "İnşaat",      "CEMTS": "İnşaat",
-    "BRISA": "Lastik",
-    "LOGO":  "Yazılım",     "INDES": "Yazılım",
-    "ALFAS": "Finans",
-    "TSKB":  "Bankacılık",
-    "ALARK": "Diğer",       "IHLGM": "Diğer",
-    "PRKME": "Diğer",
+    # Bankacılık
+    "AKBNK": "Bankacılık", "GARAN": "Bankacılık", "HALKB": "Bankacılık",
+    "ISCTR": "Bankacılık", "VAKBN": "Bankacılık", "YKBNK": "Bankacılık",
+    "TSKB":  "Bankacılık", "SKBNK": "Bankacılık",
+    # Otomotiv
+    "FROTO": "Otomotiv", "TOASO": "Otomotiv", "OTKAR": "Otomotiv",
+    "DOAS":  "Otomotiv", "TTRAK": "Otomotiv",
+    # Beyaz Eşya / Elektronik
+    "ARCLK": "Elektronik", "VESTL": "Elektronik",
+    # Perakende
+    "BIMAS": "Perakende", "MGROS": "Perakende", "SOKM": "Perakende",
+    "MAVI":  "Perakende",
+    # Gıda
+    "ULKER": "Gıda", "CCOLA": "Gıda", "AEFES": "Gıda",
+    "BALSU": "Gıda", "TUKAS": "Gıda", "TABGD": "Gıda",
+    # Havacılık / Ulaşım
+    "THYAO": "Havacılık", "PGSUS": "Havacılık", "TAVHL": "Havacılık",
+    "FENER": "Spor", "GSRAY": "Spor", "TSPOR": "Spor",
+    # Telekom
+    "TCELL": "Telekom", "TTKOM": "Telekom",
+    # Enerji
+    "AKSEN": "Enerji", "ODAS": "Enerji", "ENERY": "Enerji",
+    "ENJSA": "Enerji", "ZOREN": "Enerji", "CWENE": "Enerji",
+    "EUPWR": "Enerji", "IZENR": "Enerji", "KCAER": "Enerji",
+    # Petrokimya / Kimya
+    "TUPRS": "Petrokimya", "PETKM": "Petrokimya", "SASA": "Kimya",
+    "AKSA":  "Kimya",
+    # Demir-Çelik / Metal
+    "EREGL": "Demir-Çelik", "KRDMD": "Demir-Çelik", "OYAKC": "Demir-Çelik",
+    "BRSAN": "Metal", "TRMET": "Metal", "TRALT": "Metal", "ALTNY": "Metal",
+    # Savunma / Teknoloji
+    "ASELS": "Savunma", "ASTOR": "Savunma",
+    # Holding
+    "KCHOL": "Holding", "SAHOL": "Holding", "DOHOL": "Holding",
+    "ENKAI": "Holding", "AGHOL": "Holding", "GRTHO": "Holding",
+    "KLRHO": "Holding", "RALYH": "Holding",
+    # Cam / İnşaat
+    "SISE":  "Cam", "BSOKE": "İnşaat", "BTCIM": "İnşaat",
+    "CIMSA": "İnşaat", "CANTE": "İnşaat",
+    # GYO
+    "EKGYO": "GYO", "MPARK": "GYO", "OBAMS": "GYO",
+    # Madencilik
+    "GLRMK": "Madencilik",
+    # Tarım / Gübre
+    "GUBRF": "Gübre", "EGEEN": "Tarım", "QUAGR": "Tarım",
+    # Finans / Sigorta
+    "ANSGR": "Sigorta", "TURSG": "Sigorta", "ISMEN": "Finans",
+    "REEDR": "Finans", "KTLEV": "Finans", "MAGEN": "Finans",
+    "PASEU": "Finans", "PATEK": "Finans",
+    # Diğer
+    "BRYAT": "Turizm", "GENIL": "Diğer", "GESAN": "Diğer",
+    "GRSEL": "Diğer", "DSTKF": "Diğer", "DAPGM": "Diğer",
+    "ECILC": "Diğer", "EFOR":  "Diğer", "HEKTS": "Tarım",
+    "KONTR": "Diğer", "KUYAS": "Diğer", "MIATK": "Diğer",
+    "MPARK": "GYO",   "TABGD": "Gıda",  "TRENJ": "Enerji",
+    "TUREX": "Diğer", "YEOTK": "Diğer",
 }
