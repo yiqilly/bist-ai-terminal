@@ -197,6 +197,19 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                 "unchanged":  unchanged,
             }
 
+            # Bull vs Bear hesapla
+            total = advancing + declining + unchanged or 1
+            bull_pct = round(advancing / total * 100, 1)
+            bear_pct = round(declining / total * 100, 1)
+            if bull_pct >= 60:    regime = "BULL"
+            elif bull_pct >= 50:  regime = "WEAK BULL"
+            elif bear_pct >= 60:  regime = "BEAR"
+            elif bear_pct >= 50:  regime = "WEAK BEAR"
+            else:                 regime = "NÖTR"
+            market_out["bull_pct"]  = bull_pct
+            market_out["bear_pct"]  = bear_pct
+            market_out["regime"]    = regime
+
             with _state_lock:
                 _state["last_update"]   = time.strftime("%H:%M:%S")
                 _state["source"]        = source_label

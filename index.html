@@ -257,17 +257,28 @@
 
 <!-- ── Market Bar ── -->
 <div class="market-bar">
-    <div class="mbar-item"><span class="mbar-label">YÜKSELİYOR</span><span id="m-adv" class="color-up">0</span></div>
-    <div class="mbar-item"><span class="mbar-label">DÜŞÜYOR</span><span id="m-dec" class="color-down">0</span></div>
-    <div class="mbar-item"><span class="mbar-label">DEĞİŞMEDİ</span><span id="m-unch" style="color:var(--text-dim)">0</span></div>
+    <div class="mbar-item">
+        <span class="mbar-label">PİYASA</span>
+        <span id="m-regime" style="font-weight:bold">NÖTR</span>
+    </div>
+    <div class="mbar-item" style="gap:4px; align-items:center">
+        <span class="color-up" style="font-size:10px" id="m-bull-pct">0%</span>
+        <div style="width:80px; height:8px; background:#1e293b; border-radius:4px; overflow:hidden; position:relative">
+            <div id="m-bull-bar" style="position:absolute;left:0;top:0;height:100%;background:var(--success);width:50%;transition:width 0.5s"></div>
+            <div id="m-bear-bar" style="position:absolute;right:0;top:0;height:100%;background:var(--danger);width:50%;transition:width 0.5s"></div>
+        </div>
+        <span class="color-down" style="font-size:10px" id="m-bear-pct">0%</span>
+    </div>
+    <div class="mbar-item"><span class="mbar-label">▲</span><span id="m-adv" class="color-up">0</span></div>
+    <div class="mbar-item"><span class="mbar-label">▼</span><span id="m-dec" class="color-down">0</span></div>
     <div class="mbar-item" style="margin-left:auto">
-        <span class="mbar-label">CORE SİNYAL</span><span id="m-core" style="color:var(--core-color)">0</span>
+        <span class="mbar-label">CORE</span><span id="m-core" style="color:var(--core-color)">0</span>
     </div>
     <div class="mbar-item">
-        <span class="mbar-label">SWING SİNYAL</span><span id="m-swing" style="color:var(--swing-color)">0</span>
+        <span class="mbar-label">SWING</span><span id="m-swing" style="color:var(--swing-color)">0</span>
     </div>
     <div class="mbar-item">
-        <span class="mbar-label">SON GÜNCELLEME</span><span id="m-ts" style="color:var(--text-dim)">--:--:--</span>
+        <span class="mbar-label">SON</span><span id="m-ts" style="color:var(--text-dim)">--:--:--</span>
     </div>
 </div>
 
@@ -406,9 +417,20 @@
             `XU100: <b class="${chg>=0?'color-up':'color-down'}">${idx.toLocaleString('tr-TR')} (${chg>0?'+':''}${chg}%)</b>`;
 
         // Market bar
+        const bullPct = m.bull_pct || 0;
+        const bearPct = m.bear_pct || 0;
+        const regime  = m.regime   || 'NÖTR';
+        const regimeColor = regime.includes('BULL') ? 'var(--success)' :
+                            regime.includes('BEAR') ? 'var(--danger)'  : 'var(--warning)';
+
+        document.getElementById('m-regime').textContent  = regime;
+        document.getElementById('m-regime').style.color  = regimeColor;
+        document.getElementById('m-bull-pct').textContent = bullPct + '%';
+        document.getElementById('m-bear-pct').textContent = bearPct + '%';
+        document.getElementById('m-bull-bar').style.width = bullPct + '%';
+        document.getElementById('m-bear-bar').style.width = bearPct + '%';
         document.getElementById('m-adv').textContent   = m.advancing  || 0;
         document.getElementById('m-dec').textContent   = m.declining  || 0;
-        document.getElementById('m-unch').textContent  = m.unchanged  || 0;
         document.getElementById('m-core').textContent  = (data.core_signals  || []).length;
         document.getElementById('m-swing').textContent = (data.swing_signals || []).length;
         document.getElementById('m-ts').textContent    = data.last_update || '--:--:--';
