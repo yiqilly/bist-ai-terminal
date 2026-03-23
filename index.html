@@ -76,34 +76,30 @@
 
         /* ── Heatmap ── */
         .heatmap {
-            height: 70px;
+            height: 110px;
             background: #010409;
             border-bottom: 1px solid var(--border);
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
             gap: 1px;
             padding: 1px;
-            overflow-x: auto;
             flex-shrink: 0;
+            overflow: hidden;
         }
         .hm-cell {
-            min-width: 80px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 1px;
             cursor: pointer;
             border: 1px solid transparent;
-            background: #0d1117;
             transition: 0.1s;
-            flex-shrink: 0;
         }
-        .hm-cell:hover { background: #161b22; }
-        .hm-cell.core-cell  { border-color: rgba(0,210,255,0.25); }
-        .hm-cell.swing-cell { border-color: rgba(167,139,250,0.25); }
-        .hm-sym  { font-size: 9px; font-weight: bold; color: var(--accent); }
-        .hm-pct  { font-size: 10px; font-weight: bold; }
-        .hm-type { font-size: 8px; color: var(--text-dim); }
+        .hm-cell:hover { filter: brightness(1.3); }
+        .hm-cell.signal-cell { border-color: rgba(0,210,255,0.6) !important; border-width: 2px; }
+        .hm-sym  { font-size: 8px; font-weight: bold; color: #fff; }
+        .hm-pct  { font-size: 9px; font-weight: bold; }
 
         /* ── Layout ── */
         .workspace {
@@ -430,20 +426,30 @@
 
     // ── Heatmap ────────────────────────────────────────────────
     function renderHeatmap() {
-        const all = data.signals || [];
+        const stocks  = data.heatmap || [];
+        const signals = new Set((data.signals || []).map(s => s.symbol));
         const box = document.getElementById('heatmap');
         box.innerHTML = '';
-        all.slice(0, 40).forEach(s => {
-            const isCore = s.setup === 'CORE_EDGE';
+
+        stocks.forEach(s => {
+            const chg = s.change || 0;
+            const intensity = Math.min(Math.abs(chg) / 5, 1);
+            let bg;
+            if (chg > 0)      bg = `rgba(74,222,128,${0.15 + intensity * 0.55})`;
+            else if (chg < 0) bg = `rgba(248,113,113,${0.15 + intensity * 0.55})`;
+            else              bg = '#0d1117';
+
             const div = document.createElement('div');
-            div.className = `hm-cell ${isCore ? 'core-cell' : 'swing-cell'}`;
+            div.className = `hm-cell${signals.has(s.symbol) ? ' signal-cell' : ''}`;
+            div.style.background = bg;
             div.innerHTML = `
                 <span class="hm-sym">${s.symbol}</span>
-                <span class="hm-pct ${s.rs >= 1 ? 'color-up' : 'color-down'}">RS ${s.rs}</span>
-                <span class="hm-type" style="color:${isCore?'var(--core-color)':'var(--swing-color)'}">
-                    ${isCore ? 'CORE' : 'SWING'}
-                </span>`;
-            div.onclick = () => selectSig(s);
+                <span class="hm-pct">${chg > 0 ? '+' : ''}${chg}%</span>`;
+            div.title = `${s.symbol} | ${s.sector} | ₺${s.price}`;
+            div.onclick = () => {
+                const sig = (data.signals || []).find(x => x.symbol === s.symbol);
+                if (sig) selectSig(sig);
+            };
             box.appendChild(div);
         });
     }

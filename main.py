@@ -40,6 +40,7 @@ _state: dict = {
     "core_signals": [],  # sadece CORE_EDGE
     "swing_signals": [], # sadece SWING_EDGE
     "watching": [],      # WATCHING + CONFIRMING (yaklaşan sinyaller)
+    "heatmap": [],       # tüm hisseler (ısı haritası)
     "sectors": [],
 }
 _state_lock  = threading.Lock()
@@ -200,10 +201,29 @@ def _pipeline_loop(bus, strategy, sector_eng, telegram, source_label, cache=None
                 _state["last_update"]   = time.strftime("%H:%M:%S")
                 _state["source"]        = source_label
                 _state["market"]        = market_out
+                # Heatmap: tüm hisseler
+                heatmap_out = []
+                for sym, tick in snap.ticks.items():
+                    price = getattr(tick, "price", 0) or 0
+                    chg   = 0.0
+                    if cache:
+                        sc2 = cache._data.get(sym)
+                        if sc2 and sc2.change_pct_reliable:
+                            chg = sc2.change_pct
+                    from data.sector_map import SYMBOL_SECTOR
+                    heatmap_out.append({
+                        "symbol": sym,
+                        "price":  _f(price),
+                        "change": _f(chg),
+                        "sector": SYMBOL_SECTOR.get(sym, "Diğer"),
+                    })
+                heatmap_out.sort(key=lambda x: x["change"], reverse=True)
+
                 _state["signals"]       = all_signals_out
                 _state["core_signals"]  = core_signals_out
                 _state["swing_signals"] = swing_signals_out
                 _state["watching"]      = watching_out
+                _state["heatmap"]       = heatmap_out
                 _state["sectors"]       = sectors_out
 
         except Exception as e:
