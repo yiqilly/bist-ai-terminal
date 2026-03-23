@@ -320,7 +320,9 @@ def _build_ctx(tick, snap, sector_strength: float, cache=None, sym: str = "") ->
 
             # ATR(14)
             if len(closes) >= 2:
-                atr = IndicatorEngine.atr(highs, lows, closes, period=min(14, len(closes)-1))
+                _calc = IndicatorEngine.atr(highs, lows, closes, period=min(14, len(closes)-1))
+                if _calc and _calc > 0.01:
+                    atr = _calc
 
             # Vol MA (20 bar ort)
             if len(volumes) >= 5:
