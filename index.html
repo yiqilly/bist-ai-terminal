@@ -755,20 +755,24 @@
             btn.style.display = 'none';
 
             let html = `
-                <div style="margin-bottom:8px;font-weight:bold;color:var(--accent);">KÜNYE</div>
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--accent);">${data.info?.longName || sym} — KÜNYE</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:12px;">
-                    <div class="tg-item"><span class="tg-label">Piyasa Değeri</span><b style="font-size:10px;">${data.info?.marketCap ? (data.info.marketCap / 1e9).toFixed(1) + ' Milyar' : '—'}</b></div>
-                    <div class="tg-item"><span class="tg-label">Sektör</span><b style="font-size:9px;">${data.info?.sector || '—'}</b></div>
-                    <div class="tg-item"><span class="tg-label">F/K</span><b style="font-size:11px;">${data.info?.trailingPE?.toFixed(2) || '—'}</b></div>
-                    <div class="tg-item"><span class="tg-label">PD/DD</span><b style="font-size:11px;">${data.info?.priceToBook?.toFixed(2) || '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">Piyasa Değeri</span><b style="font-size:10px;">${data.info?.marketCap ? (data.info.marketCap / 1e9).toFixed(1) + ' Mr ₺' : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">Hisse Sayısı</span><b style="font-size:10px;">${data.info?.sharesOutstanding ? (data.info.sharesOutstanding / 1e6).toFixed(1) + ' Mn' : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">F/K</span><b style="font-size:13px;color:var(--warning);">${data.info?.trailingPE != null ? Number(data.info.trailingPE).toFixed(2) : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">PD/DD</span><b style="font-size:13px;color:var(--warning);">${data.info?.priceToBook != null ? Number(data.info.priceToBook).toFixed(2) : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">52H Yüksek</span><b style="font-size:11px;color:var(--success);">₺${data.info?.fiftyTwoWeekHigh ?? '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">52H Düşük</span><b style="font-size:11px;color:var(--danger);">₺${data.info?.fiftyTwoWeekLow ?? '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">Yabancı Payı</span><b style="font-size:11px;">%${data.info?.foreignRatio != null ? Number(data.info.foreignRatio).toFixed(1) : '—'}</b></div>
+                    <div class="tg-item"><span class="tg-label">Free Float</span><b style="font-size:11px;">%${data.info?.freeFloat != null ? Number(data.info.freeFloat).toFixed(1) : '—'}</b></div>
                 </div>
 
-                <div style="margin-bottom:8px;font-weight:bold;color:var(--success);">GELİR TABLOSU (Son Göstergeler)</div>
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--success);">GELİR TABLOSU (Son Dönem)</div>
                 <table style="width:100%;font-size:9px;margin-bottom:12px;border-collapse:collapse;">
                     ${(data.income_stmt||[]).map(x => `<tr><td style="padding:4px 2px;color:var(--text-dim); border-bottom:1px solid #1e293b;">${x.item.substring(0,30)}</td><td style="text-align:right;border-bottom:1px solid #1e293b;">${x.value}</td></tr>`).join('')}
                 </table>
 
-                <div style="margin-bottom:8px;font-weight:bold;color:var(--warning);">BİLANÇO VAZİYETİ (Son Göstergeler)</div>
+                <div style="margin-bottom:8px;font-weight:bold;color:var(--warning);">BİLANÇO (Son Dönem)</div>
                 <table style="width:100%;font-size:9px;margin-bottom:12px;border-collapse:collapse;">
                     ${(data.balance_sheet||[]).map(x => `<tr><td style="padding:4px 2px;color:var(--text-dim);border-bottom:1px solid #1e293b;">${x.item.substring(0,30)}</td><td style="text-align:right;border-bottom:1px solid #1e293b;">${x.value}</td></tr>`).join('')}
                 </table>

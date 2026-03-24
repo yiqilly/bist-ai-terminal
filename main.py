@@ -459,7 +459,11 @@ async def api_fundamentals(symbol: str):
     try:
         t = borsapy.Ticker(symbol)
         
-        info_dict = dict(t.info) if hasattr(t.info, "keys") else {}
+        try:
+            info_dict = dict(t.info) if hasattr(t.info, "keys") else {}
+        except Exception as info_err:
+            logger.warning(f"Fundamentals info hatası ({symbol}): {info_err}")
+            info_dict = {}
             
         bs_list = []
         bs = t.balance_sheet
