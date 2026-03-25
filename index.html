@@ -589,12 +589,15 @@
 
         list.forEach(s => {
             const isCore = s.setup === 'CORE_EDGE';
-            const isWatch = s.state === 'WATCHING' || s.state === 'CONFIRMING';
+            const isWatch = s.state === 'WATCHING' || s.state === 'CONFIRMING' || s.state === 'ENTRY_WAIT';
             const tr = document.createElement('tr');
             tr.onclick = () => { document.querySelectorAll('tr').forEach(r=>r.classList.remove('sel')); tr.classList.add('sel'); selectSig(s); };
 
+            const stateColor = s.state === 'CONFIRMING' ? '#fbbf24'
+                             : s.state === 'ENTRY_WAIT' ? '#4ade80'
+                             : '#64748b';
             const stateTag = isWatch
-                ? `<span style="font-size:9px;padding:2px 5px;background:#1e293b;color:${s.state==='CONFIRMING'?'#fbbf24':'#64748b'};border-radius:2px">${s.state_label}</span>`
+                ? `<span style="font-size:9px;padding:2px 5px;background:#1e293b;color:${stateColor};border-radius:2px">${s.state_label}</span>`
                 : '';
 
             tr.innerHTML = `

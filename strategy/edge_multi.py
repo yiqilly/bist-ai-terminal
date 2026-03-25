@@ -26,6 +26,7 @@ from typing import Optional
 from config import (
     CORE_RS_THRESHOLD, CORE_CONSOLIDATION_THRESHOLD, CORE_VOL_THRESHOLD,
     CORE_STOP_ATR, CORE_TARGET_ATR,
+    CORE_SECTOR_THRESHOLD, CORE_PULLBACK_BARS, CORE_PULLBACK_ATR,
 )
 
 
@@ -35,6 +36,7 @@ class EdgeState(str, Enum):
     IDLE       = "IDLE"        # Takipte değil
     WATCHING   = "WATCHING"    # Kısmi koşullar sağlandı, izleniyor
     CONFIRMING = "CONFIRMING"  # Tüm koşullar sağlandı, teyit bekleniyor
+    ENTRY_WAIT = "ENTRY_WAIT"  # Sinyal onaylandı, optimal giriş fiyatı bekleniyor
     SIGNAL     = "SIGNAL"      # Onaylı AL sinyali
     COOLDOWN   = "COOLDOWN"    # Sinyal sonrası bekleme
 
@@ -69,8 +71,10 @@ class EdgeSignal:
     detail:     str   = ""
 
     # State sayaçları
-    _confirm_bars: int = field(default=0, repr=False)  # CONFIRMING'de geçirilen bar sayısı
-    _cooldown_bars: int = field(default=0, repr=False) # COOLDOWN'da geçirilen bar sayısı
+    _confirm_bars: int = field(default=0, repr=False)     # CONFIRMING'de geçirilen bar sayısı
+    _cooldown_bars: int = field(default=0, repr=False)    # COOLDOWN'da geçirilen bar sayısı
+    _entry_wait_bars: int = field(default=0, repr=False)  # ENTRY_WAIT'te geçirilen bar sayısı
+    _entry_limit: float = field(default=0.0, repr=False)  # Pullback hedef fiyatı
     _date: Optional[date] = field(default=None, repr=False)
 
     # Watchlist için kısmi koşul takibi
@@ -82,6 +86,8 @@ class EdgeSignal:
             self.state = new_state
             if new_state == EdgeState.CONFIRMING:
                 self._confirm_bars = 0
+            if new_state == EdgeState.ENTRY_WAIT:
+                self._entry_wait_bars = 0
             if new_state == EdgeState.COOLDOWN:
                 self._cooldown_bars = 0
             if new_state in (EdgeState.IDLE, EdgeState.WATCHING):
@@ -93,6 +99,7 @@ class EdgeSignal:
             EdgeState.IDLE:       "—",
             EdgeState.WATCHING:   "İZLENİYOR",
             EdgeState.CONFIRMING: "TEYİT BEKLENİYOR",
+            EdgeState.ENTRY_WAIT: "GİRİŞ BEKLENİYOR",
             EdgeState.SIGNAL:     "AL SİNYALİ",
             EdgeState.COOLDOWN:   "BEKLEME",
         }
@@ -149,21 +156,23 @@ class EdgeMultiStrategy:
             return sig
 
         # ── CORE koşul kontrolü ───────────────────────────────
-        is_uptrend  = (e9 > e21) if (e9 > 0 and e21 > 0) else True
-        is_rs_ok    = rs >= CORE_RS_THRESHOLD
-        is_consol   = (atr / bar.close) < CORE_CONSOLIDATION_THRESHOLD if bar.close > 0 else False
-        is_vol_ok   = (intra_vol > vol_ma * CORE_VOL_THRESHOLD) or vol_spike
+        is_uptrend   = (e9 > e21) if (e9 > 0 and e21 > 0) else True
+        is_rs_ok     = rs >= CORE_RS_THRESHOLD
+        is_consol    = (atr / bar.close) < CORE_CONSOLIDATION_THRESHOLD if bar.close > 0 else False
+        is_vol_ok    = (intra_vol > vol_ma * CORE_VOL_THRESHOLD) or vol_spike
+        is_sector_ok = sec_str >= CORE_SECTOR_THRESHOLD
 
         core_partial = is_uptrend and is_rs_ok
-        core_all     = core_partial and is_consol and is_vol_ok
+        core_all     = core_partial and is_consol and is_vol_ok and is_sector_ok
 
         # Kriter listesi (UI için)
         met, miss = [], []
         if sig.setup_type != SetupType.NEWS_EDGE:
-            (met if is_uptrend else miss).append("Uptrend")
-            (met if is_rs_ok   else miss).append(f"RS>{CORE_RS_THRESHOLD}")
-            (met if is_consol  else miss).append("Konsolidasyon")
-            (met if is_vol_ok  else miss).append("Hacim")
+            (met if is_uptrend    else miss).append("Uptrend")
+            (met if is_rs_ok      else miss).append(f"RS>{CORE_RS_THRESHOLD}")
+            (met if is_consol     else miss).append("Konsolidasyon")
+            (met if is_vol_ok     else miss).append("Hacim")
+            (met if is_sector_ok  else miss).append("Sektör")
         sig.conditions_met  = met
         sig.conditions_miss = miss
 
@@ -195,21 +204,45 @@ class EdgeMultiStrategy:
                 sig.set_state(EdgeState.WATCHING if core_partial else EdgeState.IDLE)
                 return sig
 
-            # 1 bar teyit sonrası → SIGNAL
+            # 1 bar teyit sonrası → ENTRY_WAIT (optimal giriş ara)
             if sig._confirm_bars >= 1:
-                sig.set_state(EdgeState.SIGNAL)
-                sig.is_signal = True
-
+                sig.set_state(EdgeState.ENTRY_WAIT)
+                sig.daily_atr = atr
+                # Sinyal parametrelerini şimdiden hesapla (market entry fallback)
                 sig.entry    = bar.close
                 sig.stop     = bar.close - (atr * CORE_STOP_ATR)
                 sig.target   = bar.close + (atr * CORE_TARGET_ATR)
                 sig.rr_ratio = round(CORE_TARGET_ATR / CORE_STOP_ATR, 2)
-                sig.daily_atr = atr
+                # Pullback hedefi: kapanıştan 0.3×ATR aşağısı
+                sig._entry_limit = bar.close - (atr * CORE_PULLBACK_ATR)
                 sig.detail   = (
                     f"CORE EDGE | RS:{rs:.2f} | "
                     f"ATR/P:{atr/bar.close*100:.1f}% | "
                     f"Vol:{intra_vol/vol_ma:.1f}x"
                 ) if vol_ma > 0 else f"CORE EDGE | RS:{rs:.2f}"
+
+        elif sig.state == EdgeState.ENTRY_WAIT:
+            sig._entry_wait_bars += 1
+
+            still_ok = core_partial  # minimum koşul: uptrend + RS bozulmamış olsun
+            if not still_ok:
+                sig.set_state(EdgeState.COOLDOWN)
+                return sig
+
+            pullback_hit = bar.close <= sig._entry_limit
+            timeout      = sig._entry_wait_bars >= CORE_PULLBACK_BARS
+
+            if pullback_hit:
+                # Daha iyi fiyattan gir: stop ve hedefi güncelle
+                sig.entry    = bar.close
+                sig.stop     = bar.close - (atr * CORE_STOP_ATR)
+                sig.target   = bar.close + (atr * CORE_TARGET_ATR)
+                sig.daily_atr = atr
+                sig.detail  += " | PULLBACK GİRİŞ"
+
+            if pullback_hit or timeout:
+                sig.set_state(EdgeState.SIGNAL)
+                sig.is_signal = True
 
                 for cb in self._buy_callbacks:
                     try: cb(sig)
@@ -233,8 +266,10 @@ class EdgeMultiStrategy:
         sig.entry = sig.stop = sig.target = 0.0
         sig.weight = sig.rr_ratio = 0.0
         sig.detail = ""
-        sig._confirm_bars  = 0
-        sig._cooldown_bars = 0
+        sig._confirm_bars    = 0
+        sig._cooldown_bars   = 0
+        sig._entry_wait_bars = 0
+        sig._entry_limit     = 0.0
         sig.conditions_met  = []
         sig.conditions_miss = []
 
@@ -251,7 +286,7 @@ class EdgeMultiStrategy:
 
     def get_watching(self) -> list[EdgeSignal]:
         return [s for s in self._signals.values()
-                if s.state in (EdgeState.WATCHING, EdgeState.CONFIRMING)]
+                if s.state in (EdgeState.WATCHING, EdgeState.CONFIRMING, EdgeState.ENTRY_WAIT)]
 
     def get_all_active(self) -> list[EdgeSignal]:
         return [s for s in self._signals.values()
