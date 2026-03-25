@@ -19,6 +19,13 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
+# yfinance TzCache uyarısını önle (Render ortamında /opt/render/.cache çakışıyor)
+try:
+    import yfinance as yf
+    yf.set_tz_cache_location("/tmp/yfinance_tz_cache")
+except Exception:
+    pass
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
