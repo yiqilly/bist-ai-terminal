@@ -414,7 +414,7 @@ def _tick_to_bar(tick):
 
     class _Bar:
         def __init__(self, t, p):
-            import datetime
+            from datetime import datetime
             self.timestamp = datetime.now()
             self.open   = getattr(t, "open",  p)  or p
             self.high   = getattr(t, "high",  p)  or p
