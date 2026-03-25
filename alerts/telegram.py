@@ -29,14 +29,11 @@ class TelegramNotifier:
             logger.error(f"Telegram hatası: {e}")
 
     def send_buy(self, sig):
-        emoji = "🔵" if "CORE" in str(sig.setup_type) else "🟣"
-        shield = "🛡" if "CORE" in str(sig.setup_type) else "⚡"
-        weight_pct = int(sig.weight * 100)
         self.send(
-            f"{emoji} <b>BIST EDGE YENİ SİNYAL</b> {emoji}\n"
+            f"🔵 <b>BIST EDGE YENİ SİNYAL</b> 🔵\n"
             f"────────────────────\n"
             f"📌 <b>Hisse:</b> #{sig.symbol}\n"
-            f"{shield} <b>Strateji:</b> {sig.setup_type} (Sermaye: %{weight_pct})\n\n"
+            f"🛡 <b>Strateji:</b> CORE_EDGE\n\n"
             f"📉 <b>Giriş Fiyatı:</b> ₺{sig.entry:.2f}\n"
             f"🛑 <b>Zarar Kes:</b> ₺{sig.stop:.2f}\n"
             f"🎯 <b>Kar Al Hedefi:</b> ₺{sig.target:.2f}\n\n"
@@ -54,8 +51,7 @@ class TelegramNotifier:
             f"────────────────────\n"
             f"📌 <b>Hisse:</b> #{sig.symbol}\n"
             f"🔎 <b>Durum:</b> {state_val}\n"
-            f"🛡 <b>Strateji:</b> {sig.setup_type}\n\n"
-            f"💵 <b>Fiyat:</b> ₺{sig.entry:.2f}\n"
+            f"🛡 <b>Strateji:</b> CORE_EDGE\n\n"
             f"📊 <b>RS Puanı:</b> {sig.rs_score:.2f}\n\n"
             f"📝 <b>İzleme Sebebi:</b>\n<i>{getattr(sig, 'detail', '')}</i>\n\n"
             f"⏱ <b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
