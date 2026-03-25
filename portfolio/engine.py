@@ -25,6 +25,7 @@ class PortfolioEngine:
         self.cash = CAPITAL_TL
         self.max_positions = MAX_POSITIONS
         self.positions: dict[str, Position] = {}
+        self.closed_trades: list[dict] = []
         logger.info(f"Portfoy Motoru baslatildi — Kasa: ₺{self.cash:,.2f}, Maksimum Pozisyon: {self.max_positions}")
 
     @property
@@ -52,6 +53,39 @@ class PortfolioEngine:
                             if new_stop > pos.stop_loss:
                                 pos.stop_loss = new_stop
 
+    def update_from_bar(self, symbol: str, high: float, low: float, close: float) -> list[str]:
+        """Backtest için özel güncelleme. High ile zirveyi bulur, Trailing Stop'u yukarı taşır.
+        Eğer gün içinde Low stop'u patlatırsa veya High target'i vurursa sebebiyle döner."""
+        reasons = []
+        if symbol in self.positions:
+            pos = self.positions[symbol]
+            
+            # Önce hedef vuruldu mu diye kontrol et (gap up senaryosu)
+            if high >= pos.take_profit:
+                reasons.append(f"KAR AL: ₺{pos.take_profit:.2f}")
+                pos.current_price = pos.take_profit
+                return reasons
+                
+            # Stop vuruldu mu diye kontrol et
+            if low <= pos.stop_loss:
+                reasons.append(f"STOP LOSS (İzleyen): ₺{pos.stop_loss:.2f}")
+                pos.current_price = pos.stop_loss
+                return reasons
+            
+            # Gün içi stop/hedef vurulmadıysa, trailing stop'u High ile güncelle
+            if high > pos.highest_price:
+                pos.highest_price = high
+                trail_distance = pos.entry_price - pos.stop_loss
+                if trail_distance > 0:
+                    new_stop = pos.highest_price - trail_distance
+                    if new_stop > pos.stop_loss:
+                        pos.stop_loss = new_stop
+                        
+            # Kapanış fiyatını son fiyat olarak kaydet
+            pos.current_price = close
+            
+        return reasons
+
     def open_position(self, sig) -> bool:
         """Yeni bir AL sinyali geldiğinde portföy kurallarını (Bakiye, Yer) kontrol edip sanal alım yapar."""
         if self.free_slots <= 0:
@@ -59,8 +93,9 @@ class PortfolioEngine:
         if sig.symbol in self.positions:
             return False # Zaten portföyde var
             
-        # Ayrılacak Bütçe (Örn: 50.000 / 5 = 10.000 TL)
-        alloc = CAPITAL_TL / self.max_positions
+        # Dinamik Bütçe: Mevcut Toplam Portföy Değeri / 5
+        total_equity = self.cash + sum((p.quantity * p.current_price) for p in self.positions.values())
+        alloc = total_equity / self.max_positions
         if self.cash < alloc * 0.9: # Tolerans
             return False
             
@@ -108,14 +143,27 @@ class PortfolioEngine:
                 
         # Sinyal tespit edilenleri portföyden çıkarıp bakiyeyi güncelle
         for sym in to_remove:
-            self._close(sym)
+            self._close(sym, reason=next(r for s, r in sells if s == sym))
             
         return sells
 
-    def _close(self, symbol: str):
+    def _close(self, symbol: str, exit_time: datetime = None, reason: str = ""):
         pos = self.positions.pop(symbol, None)
         if pos:
             revenue = pos.quantity * pos.current_price
-            profit = revenue - (pos.quantity * pos.entry_price)
+            cost = pos.quantity * pos.entry_price
+            profit = revenue - cost
             self.cash += revenue
+            
+            self.closed_trades.append({
+                'symbol': symbol,
+                'setup': pos.setup,
+                'entry': pos.entry_price,
+                'exit': pos.current_price,
+                'pnl': profit,
+                'pnl_pct': (profit / cost * 100) if cost > 0 else 0,
+                'reason': reason,
+                'entry_time': pos.entry_time,
+                'exit_time': exit_time or datetime.now()
+            })
             logger.info(f"PORTFOY SATISI: {symbol} | Fiyat: ₺{pos.current_price} | Kar/Zarar: ₺{profit:,.2f} | Yeni Kasa: ₺{self.cash:,.2f}")

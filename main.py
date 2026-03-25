@@ -8,6 +8,7 @@
 # ============================================================
 import argparse
 import asyncio
+from datetime import datetime, timedelta
 import logging
 import math
 import os
@@ -36,10 +37,8 @@ _state: dict = {
         "index_val": 0, "change": 0,
         "advancing": 0, "declining": 0, "unchanged": 0,
     },
-    "signals": [],       # BUY sinyalleri (CORE + SWING)
-    "core_signals": [],  # sadece CORE_EDGE
-    "swing_signals": [], # sadece SWING_EDGE
-    "watching": [],      # WATCHING + CONFIRMING (yaklaşan sinyaller)
+    "signals": [],    # BUY sinyalleri (CORE_EDGE)
+    "watching": [],   # WATCHING + CONFIRMING (yaklaşan sinyaller)
     "heatmap": [],       # tüm hisseler (ısı haritası)
     "sectors": [],
 }
@@ -76,6 +75,112 @@ def _index_fetch_loop():
         time.sleep(300)
 
 
+# ── Günlük Bar Cache ──────────────────────────────────────────
+
+def _load_daily_bars(symbols: list[str], cache) -> None:
+    """
+    Startup'ta yfinance'tan 60 günlük günlük bar çekip
+    SnapshotCache'e '1d' timeframe olarak yükler.
+    """
+    try:
+        import yfinance as yf
+        import numpy as np
+        from data.models import BarData
+
+        logger.info(f"Gunluk bar gecmisi yukleniyor ({len(symbols)} sembol)...")
+        yf_syms = [f"{s}.IS" for s in symbols] + ["XU100.IS"]
+        df = yf.download(yf_syms, period="60d", interval="1d",
+                         group_by="ticker", auto_adjust=True, progress=False)
+        df.ffill(inplace=True)
+
+        from data.snapshot_cache import SymbolCache
+
+        def _store_bars(df, yf_sym, cache_key):
+            try:
+                data = df[yf_sym].dropna(subset=["Close"])
+            except KeyError:
+                return 0
+            if data.empty:
+                return 0
+            sc = cache._data.get(cache_key)
+            if sc is None:
+                sc = SymbolCache(symbol=cache_key)
+                cache._data[cache_key] = sc
+            for ts, row in data.iterrows():
+                sc.bars["1d"].append(BarData(
+                    symbol=cache_key,
+                    open=float(row["Open"]), high=float(row["High"]),
+                    low=float(row["Low"]),  close=float(row["Close"]),
+                    volume=float(row["Volume"]),
+                    timestamp=ts.to_pydatetime(),
+                ))
+            if len(sc.bars["1d"]) >= 2:
+                sc.prev_close = sc.bars["1d"][-2].close
+            return 1
+
+        # XU100 günlük barları da sakla (RS hesabı için)
+        _store_bars(df, "XU100.IS", "XU100")
+
+        loaded = sum(_store_bars(df, f"{sym}.IS", sym) for sym in symbols)
+        logger.info(f"Gunluk bar yuklendi: {loaded}/{len(symbols)} sembol")
+    except Exception as e:
+        logger.error(f"Gunluk bar yukleme hatasi: {e}")
+
+
+def _daily_bar_update_loop(symbols: list[str], cache) -> None:
+    """
+    Her gün 18:30'da (BIST kapanışı sonrası) son günlük barı ekler.
+    """
+    import yfinance as yf
+    from data.models import BarData
+
+    while True:
+        now = datetime.now()
+        # Bugün 18:30'u hesapla
+        target = now.replace(hour=18, minute=30, second=0, microsecond=0)
+        if now >= target:
+            target = target + timedelta(days=1)
+        wait_sec = (target - now).total_seconds()
+        time.sleep(wait_sec)
+
+        try:
+            logger.info("Gunluk bar guncelleniyor...")
+            yf_syms = [f"{s}.IS" for s in symbols] + ["XU100.IS"]
+            df = yf.download(yf_syms, period="2d", interval="1d",
+                             group_by="ticker", auto_adjust=True, progress=False)
+
+            def _append_latest(df, yf_sym, cache_key):
+                try:
+                    data = df[yf_sym].dropna(subset=["Close"])
+                except KeyError:
+                    return
+                if data.empty:
+                    return
+                sc = cache._data.get(cache_key)
+                if sc is None:
+                    return
+                ts, row = data.index[-1], data.iloc[-1]
+                bar = BarData(
+                    symbol=cache_key,
+                    open=float(row["Open"]), high=float(row["High"]),
+                    low=float(row["Low"]),  close=float(row["Close"]),
+                    volume=float(row["Volume"]),
+                    timestamp=ts.to_pydatetime(),
+                )
+                existing = list(sc.bars["1d"])
+                if not existing or existing[-1].timestamp.date() != bar.timestamp.date():
+                    sc.bars["1d"].append(bar)
+                    sc.prev_close = bar.close
+
+            _append_latest(df, "XU100.IS", "XU100")
+            for sym in symbols:
+                _append_latest(df, f"{sym}.IS", sym)
+
+            logger.info("Gunluk bar guncellendi.")
+        except Exception as e:
+            logger.error(f"Gunluk bar guncelleme hatasi: {e}")
+
+
 # ── Sinyal Serialize ──────────────────────────────────────────
 def _serialize_signal(sig) -> dict:
     return {
@@ -89,7 +194,6 @@ def _serialize_signal(sig) -> dict:
         "rr":         _f(sig.rr_ratio, 1),
         "atr":        _f(sig.daily_atr, 3),
         "rs":         _f(sig.rs_score, 3),
-        "rsi3":       _f(sig.rsi3, 1),
         "sector_str": _f(sig.sector_str, 1),
         "weight_pct": int(sig.weight * 100),
         "detail":     sig.detail,
@@ -145,10 +249,8 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                 sector_strength_map[s["name"]] = strength
 
             # EdgeMultiStrategy'ye bar ver
-            all_signals_out   = []
-            core_signals_out  = []
-            swing_signals_out = []
-            watching_out      = []
+            all_signals_out = []
+            watching_out    = []
 
             from data.sector_map import SYMBOL_SECTOR
             for sym, tick in snap.ticks.items():
@@ -184,11 +286,6 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                 if getattr(sig, "is_signal", False):
                     s = _serialize_signal(sig)
                     all_signals_out.append(s)
-                    setup_val = getattr(sig.setup_type, "value", str(sig.setup_type))
-                    if "CORE" in setup_val:
-                        core_signals_out.append(s)
-                    else:
-                        swing_signals_out.append(s)
 
                     # Telegram bildirimi (sadece yeni sinyaller)
                     key = f"{sym}_{sig._date}"
@@ -269,10 +366,8 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                     })
                 heatmap_out.sort(key=lambda x: x["change"], reverse=True)
 
-                _state["signals"]       = all_signals_out
-                _state["core_signals"]  = core_signals_out
-                _state["swing_signals"] = swing_signals_out
-                _state["watching"]      = watching_out
+                _state["signals"]  = all_signals_out
+                _state["watching"] = watching_out
                 _state["heatmap"]       = heatmap_out
                 _state["sectors"]       = sectors_out
                 
@@ -320,7 +415,7 @@ def _tick_to_bar(tick):
     class _Bar:
         def __init__(self, t, p):
             import datetime
-            self.timestamp = datetime.datetime.now()
+            self.timestamp = datetime.now()
             self.open   = getattr(t, "open",  p)  or p
             self.high   = getattr(t, "high",  p)  or p
             self.low    = getattr(t, "low",   p)  or p
@@ -352,60 +447,66 @@ def _build_ctx(tick, snap, sector_strength: float, cache=None, sym: str = "") ->
     stock_chg_pct = (sc.change_pct if sc and sc.change_pct_reliable else
                      (price - prev) / prev * 100 if prev > 0 else 0)
 
-    # RS vs endeks: 1 + (hisse%) - (endeks%) → normalize
-    index_chg_pct = _index_cache.get("change") or 0
-    rs_vs_index   = 1 + (stock_chg_pct - index_chg_pct) / 100
-
     # ── Bar geçmişinden indikatörler ─────────────────────────
-    atr   = price * 0.03   # fallback
-    rsi3  = 50.0
-    ema9  = 0.0
-    ema21 = 0.0
+    atr          = price * 0.03   # fallback
+    ema9         = 0.0
+    xu100_mom_pct = 0.0
+    ema21  = 0.0
     vol_ma = volume * 0.8 or 1
     gap_up = False
+    rs_vs_index = 1 + (stock_chg_pct - (_index_cache.get("change") or 0)) / 100  # fallback
 
     if sc:
+        bars_1d = list(sc.bars.get("1d", []))
         bars_1m = list(sc.bars.get("1m", []))
         bars_5m = list(sc.bars.get("5m", []))
-        bars = bars_5m if len(bars_5m) >= 5 else bars_1m
+        intra   = bars_5m if len(bars_5m) >= 5 else bars_1m
 
-        if len(bars) >= 4:
-            closes  = [b.close for b in bars]
-            highs   = [b.high  for b in bars]
-            lows    = [b.low   for b in bars]
-            volumes = [b.volume for b in bars]
+        # ── Günlük barlardan EMA9/21, ATR ve RS ──────────────
+        if len(bars_1d) >= 10:
+            d_closes = [b.close for b in bars_1d]
+            d_highs  = [b.high  for b in bars_1d]
+            d_lows   = [b.low   for b in bars_1d]
 
-            # RSI(3) — son 4 kapanış yeterli
-            rsi3 = IndicatorEngine.rsi(closes, period=min(3, len(closes)-1))
+            if len(d_closes) >= 9:
+                ema9  = IndicatorEngine.ema(d_closes, 9)
+            if len(d_closes) >= 21:
+                ema21 = IndicatorEngine.ema(d_closes, 21)
 
-            # EMA9 / EMA21
-            if len(closes) >= 9:
-                ema9  = IndicatorEngine.ema(closes, 9)
-            if len(closes) >= 21:
-                ema21 = IndicatorEngine.ema(closes, 21)
+            _atr = IndicatorEngine.atr(d_highs, d_lows, d_closes,
+                                       period=min(14, len(d_closes) - 1))
+            if _atr and _atr > 0.01:
+                atr = _atr
 
-            # ATR(14)
-            if len(closes) >= 2:
-                _calc = IndicatorEngine.atr(highs, lows, closes, period=min(14, len(closes)-1))
-                if _calc and _calc > 0.01:
-                    atr = _calc
+            # RS: 14 günlük momentum (backtest ile aynı formül)
+            if len(d_closes) >= 15:
+                stock_mom  = d_closes[-1] / d_closes[-15] - 1
+                xu100_sc   = cache._data.get("XU100") if cache else None
+                xu100_1d   = list(xu100_sc.bars.get("1d", [])) if xu100_sc else []
+                xu100_mom_val = 0.0
+                if len(xu100_1d) >= 15:
+                    xu100_mom_val = xu100_1d[-1].close / xu100_1d[-15].close - 1
+                    rs_vs_index   = (1 + stock_mom) / (1 + xu100_mom_val)
+                xu100_mom_pct = xu100_mom_val * 100  # % cinsinden (rejim filtresi için)
 
-            # Vol MA (20 bar ort)
+        # ── Gün içi barlardan hacim ve gap ───────────────────
+        if len(intra) >= 4:
+            volumes = [b.volume for b in intra]
             if len(volumes) >= 5:
                 vol_ma = sum(volumes[-20:]) / min(20, len(volumes))
 
-            # Gap-Up: ilk bar'ın open'ı prev_close'tan %1.5+ yüksek mi?
-            if bars and prev > 0:
-                gap_up = (bars[0].open - prev) / prev > 0.015
+            # Gap-Up: günün açılışı prev_close'tan %1.5+ yüksek mi?
+            if intra and prev > 0:
+                gap_up = (intra[0].open - prev) / prev > 0.015
 
     # Hacim spike
     vol_spike = (volume > vol_ma * 2) if vol_ma > 0 else False
 
     return {
         "rs_vs_index":     rs_vs_index,
+        "xu100_mom":       xu100_mom_pct if sc and len(list(sc.bars.get("1d",[]))) >= 15 else 0.0,
         "sector_strength": sector_strength,
         "daily_atr":       atr,
-        "rsi_3":           rsi3,
         "ema9_daily":      ema9,
         "ema21_daily":     ema21,
         "vol_ma":          vol_ma,
@@ -543,7 +644,8 @@ async def startup_event():
     adapter = MockMarketDataAdapter(update_interval=999)
     bus     = MarketBus(adapter=adapter, snapshot_interval=1.0)
 
-    snap_cache = None
+    from data.snapshot_cache import SnapshotCache
+    snap_cache = SnapshotCache()  # her zaman oluştur (günlük barlar için)
     try:
         cfg = {}
         try:
@@ -559,7 +661,7 @@ async def startup_event():
         ok = bridge.start(symbols=symbols)
         if ok:
             bus.attach_collector(bridge, bridge.cache)
-            snap_cache = bridge.cache
+            snap_cache = bridge.cache  # collector'ın cache'ini kullan
             logger.info(f"Collector: {bridge.collector.__class__.__name__}")
         else:
             raise RuntimeError("borsapy bağlanamadı")
@@ -601,6 +703,15 @@ async def startup_event():
 
     # Endeks fetch
     threading.Thread(target=_index_fetch_loop, daemon=True, name="index-fetch").start()
+
+    # Günlük bar: startup'ta geçmişi yükle, sonra her gün 18:30'da güncelle
+    _load_daily_bars(symbols, snap_cache)
+    threading.Thread(
+        target=_daily_bar_update_loop,
+        args=(symbols, snap_cache),
+        daemon=True,
+        name="daily-bar-update",
+    ).start()
 
     # Pipeline
     threading.Thread(

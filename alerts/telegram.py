@@ -41,7 +41,7 @@ class TelegramNotifier:
             f"🛑 <b>Zarar Kes:</b> ₺{sig.stop:.2f}\n"
             f"🎯 <b>Kar Al Hedefi:</b> ₺{sig.target:.2f}\n\n"
             f"⚖️ <b>Risk/Ödül:</b> {sig.rr_ratio:.1f}x\n"
-            f"📊 <b>Puanlar:</b> RSI(3): {sig.rsi3:.1f} | RS: {sig.rs_score:.2f}\n\n"
+            f"📊 <b>RS Puanı:</b> {sig.rs_score:.2f}\n\n"
             f"📝 <b>Analiz Notu:</b>\n"
             f"<i>{getattr(sig, 'detail', '')}</i>\n\n"
             f"⏱ <b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
@@ -56,7 +56,7 @@ class TelegramNotifier:
             f"🔎 <b>Durum:</b> {state_val}\n"
             f"🛡 <b>Strateji:</b> {sig.setup_type}\n\n"
             f"💵 <b>Fiyat:</b> ₺{sig.entry:.2f}\n"
-            f"📊 <b>RS Puanı:</b> {sig.rs_score:.2f} | <b>RSI3:</b> {sig.rsi3:.1f}\n\n"
+            f"📊 <b>RS Puanı:</b> {sig.rs_score:.2f}\n\n"
             f"📝 <b>İzleme Sebebi:</b>\n<i>{getattr(sig, 'detail', '')}</i>\n\n"
             f"⏱ <b>Zaman:</b> {datetime.now().strftime('%H:%M:%S')}"
         )

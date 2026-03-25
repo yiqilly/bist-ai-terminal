@@ -216,7 +216,7 @@ class NewsEngine:
         return items[:limit]
 
     def has_positive_news(self, symbol: str) -> bool:
-        return any(n.sentiment > 0.4 for n in self.get_news(symbol))
+        return any(n.sentiment > 0.3 for n in self.get_news(symbol))
 
     def has_negative_news(self, symbol: str) -> bool:
         return any(n.sentiment < -0.3 for n in self.get_news(symbol))

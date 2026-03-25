@@ -17,7 +17,6 @@
             --warning:    #fbbf24;
             --border:     #1e293b;
             --core-color: #00d2ff;   /* CORE_EDGE — mavi */
-            --swing-color:#a78bfa;   /* SWING_EDGE — mor */
             --mono:       'Consolas','Monaco','Courier New',monospace;
         }
 
@@ -57,7 +56,6 @@
             font-size: 11px;
         }
         .badge-core  { background:#0e3a4a; color:var(--core-color);  padding:2px 8px; border-radius:2px; font-size:10px; }
-        .badge-swing { background:#2e1f5e; color:var(--swing-color); padding:2px 8px; border-radius:2px; font-size:10px; }
 
         /* ── Market Bar ── */
         .market-bar {
@@ -175,7 +173,6 @@
         tr.sel { background: rgba(0,210,255,0.12); }
 
         .tag-core  { background:#0e3a4a; color:var(--core-color);  padding:2px 6px; border-radius:2px; font-size:9px; font-weight:bold; }
-        .tag-swing { background:#2e1f5e; color:var(--swing-color); padding:2px 6px; border-radius:2px; font-size:9px; font-weight:bold; }
         .w-pct { font-size: 10px; color: var(--text-dim); }
 
         /* ── Right: Detail Panel ── */
@@ -202,7 +199,6 @@
             border: 1px solid;
         }
         .signal-box.core  { background:#0e3a4a; border-color:var(--core-color);  color:var(--core-color); }
-        .signal-box.swing { background:#2e1f5e; border-color:var(--swing-color); color:var(--swing-color); }
         .signal-box.none  { background:#1e293b; border-color:var(--border);      color:var(--text-dim); }
 
         .trade-grid {
@@ -287,7 +283,7 @@
     </div>
     <div class="h-center">
         <span id="h-idx">XU100: <b>---</b></span>
-        <span><span class="badge-core">CORE %80</span> <span class="badge-swing">SWING %20</span></span>
+        <span><span class="badge-core">CORE EDGE</span></span>
     </div>
     <div class="h-right">
         <span id="ws-dot" style="font-weight:bold;color:#fbbf24">○ BAĞLANIYOR</span>
@@ -313,10 +309,7 @@
     <div class="mbar-item"><span class="mbar-label">▲</span><span id="m-adv" class="color-up">0</span></div>
     <div class="mbar-item"><span class="mbar-label">▼</span><span id="m-dec" class="color-down">0</span></div>
     <div class="mbar-item" style="margin-left:auto">
-        <span class="mbar-label">CORE</span><span id="m-core" style="color:var(--core-color)">0</span>
-    </div>
-    <div class="mbar-item">
-        <span class="mbar-label">SWING</span><span id="m-swing" style="color:var(--swing-color)">0</span>
+        <span class="mbar-label">SİNYAL</span><span id="m-core" style="color:var(--core-color)">0</span>
     </div>
     <div class="mbar-item">
         <span class="mbar-label">SON</span><span id="m-ts" style="color:var(--text-dim)">--:--:--</span>
@@ -332,9 +325,7 @@
     <!-- Left: signals -->
     <div class="signals-area">
         <div class="tab-bar">
-            <div class="tab active" onclick="switchTab('signals',this)">🔹 AL SİNYALLERİ <span class="cnt" id="cnt-signals">0</span></div>
-            <div class="tab" onclick="switchTab('core_signals',this)">🔵 CORE EDGE <span class="cnt" id="cnt-core">0</span></div>
-            <div class="tab" onclick="switchTab('swing_signals',this)">🟣 SWING EDGE <span class="cnt" id="cnt-swing">0</span></div>
+            <div class="tab active" onclick="switchTab('signals',this)">🔵 AL SİNYALLERİ <span class="cnt" id="cnt-signals">0</span></div>
             <div class="tab" onclick="switchTab('watching',this)">👁 İZLENİYOR <span class="cnt" id="cnt-watch">0</span></div>
             <div class="tab" onclick="switchTab('sectors',this)">📊 SEKTÖRLER <span class="cnt" id="cnt-sectors">0</span></div>
             <div class="tab" onclick="switchTab('news',this)">📰 HABERLER <span class="cnt" id="cnt-news">0</span></div>
@@ -347,13 +338,11 @@
                     <tr>
                         <th>Hisse</th>
                         <th>Strateji</th>
-                        <th>Ağırlık</th>
                         <th>Giriş</th>
                         <th>Stop</th>
                         <th>Hedef</th>
                         <th>R/R</th>
                         <th>RS</th>
-                        <th>RSI3</th>
                         <th>Detay</th>
                     </tr>
                 </thead>
@@ -403,7 +392,6 @@
             <div class="tg-item"><span class="tg-label">Hedef</span><b class="tg-val color-up" id="d-target">—</b></div>
             <div class="tg-item"><span class="tg-label">R/R</span><b class="tg-val" id="d-rr">—</b></div>
             <div class="tg-item"><span class="tg-label">RS</span><b class="tg-val" id="d-rs">—</b></div>
-            <div class="tg-item"><span class="tg-label">RSI3</span><b class="tg-val" id="d-rsi3">—</b></div>
         </div>
 
         <div>
@@ -496,15 +484,12 @@
         document.getElementById('m-bear-bar').style.width = bearPct + '%';
         document.getElementById('m-adv').textContent   = m.advancing  || 0;
         document.getElementById('m-dec').textContent   = m.declining  || 0;
-        document.getElementById('m-core').textContent  = (data.core_signals  || []).length;
-        document.getElementById('m-swing').textContent = (data.swing_signals || []).length;
+        document.getElementById('m-core').textContent  = (data.signals || []).length;
         document.getElementById('m-ts').textContent    = data.last_update || '--:--:--';
 
         // Counts
-        document.getElementById('cnt-signals').textContent = (data.signals       || []).length;
-        document.getElementById('cnt-core').textContent    = (data.core_signals  || []).length;
-        document.getElementById('cnt-swing').textContent   = (data.swing_signals || []).length;
-        document.getElementById('cnt-watch').textContent   = (data.watching      || []).length;
+        document.getElementById('cnt-signals').textContent = (data.signals  || []).length;
+        document.getElementById('cnt-watch').textContent   = (data.watching || []).length;
         document.getElementById('cnt-sectors').textContent = (data.sectors       || []).length;
         if(document.getElementById('cnt-news')) {
             document.getElementById('cnt-news').textContent = (data.news || []).length;
@@ -547,12 +532,10 @@
                         setup: '-',
                         state: 'IDLE',
                         entry: null,
-                        weight_pct: 0,
                         stop: '-',
                         target: '-',
                         rr: '-',
                         rs: '-',
-                        rsi3: '-',
                         atr: '-',
                         sector_str: s.sector,
                         detail: 'Şartları olgunlaşmadı.',
@@ -600,7 +583,7 @@
         body.innerHTML = '';
 
         if (!list.length) {
-            body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-dim)">SİNYAL YOK</td></tr>`;
+            body.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim)">SİNYAL YOK</td></tr>`;
             return;
         }
 
@@ -616,14 +599,12 @@
 
             tr.innerHTML = `
                 <td style="font-weight:bold;color:var(--accent)">${s.symbol} ${stateTag}</td>
-                <td><span class="${isCore?'tag-core':'tag-swing'}">${isCore?'CORE':'SWING'}</span></td>
-                <td class="w-pct">%${s.weight_pct||''}</td>
+                <td><span class="tag-core">CORE</span></td>
                 <td style="color:#fff">${s.entry?'₺'+s.entry:'—'}</td>
                 <td style="color:var(--danger)">${s.stop?'₺'+s.stop:'—'}</td>
                 <td style="color:var(--success)">${s.target?'₺'+s.target:'—'}</td>
                 <td style="color:var(--warning)">${s.rr?s.rr+'x':'—'}</td>
                 <td class="${s.rs>=1?'color-up':'color-down'}">${s.rs}</td>
-                <td class="${s.rsi3<30?'color-down':s.rsi3>70?'color-up':''}">${s.rsi3}</td>
                 <td style="color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.detail||s.met?.join(', ')||'—'}</td>`;
             body.appendChild(tr);
         });
@@ -680,22 +661,20 @@
         document.getElementById('d-sym').textContent  = s.symbol;
         document.getElementById('d-price').textContent = s.entry ? `Giriş ₺${s.entry}` : '';
         document.getElementById('d-type').innerHTML =
-            `<span class="${isCore?'tag-core':'tag-swing'}">${isCore?'CORE_EDGE':'SWING_EDGE'}</span>` +
-            ` <span class="w-pct">sermayenin %${s.weight_pct}'i</span>`;
+            `<span class="tag-core">CORE_EDGE</span>`;
 
         const box = document.getElementById('d-box');
-        box.textContent = isCore ? '🔵 CORE EDGE — AL SİNYALİ' : '🟣 SWING EDGE — AL SİNYALİ';
-        box.className = `signal-box ${isCore?'core':'swing'}`;
+        box.textContent = '🔵 CORE EDGE — AL SİNYALİ';
+        box.className = 'signal-box core';
 
         document.getElementById('d-entry').textContent  = `₺${s.entry}`;
         document.getElementById('d-stop').textContent   = `₺${s.stop}`;
         document.getElementById('d-target').textContent = `₺${s.target}`;
         document.getElementById('d-rr').textContent     = `${s.rr}x`;
         document.getElementById('d-rs').textContent     = s.rs;
-        document.getElementById('d-rsi3').textContent   = s.rsi3;
         document.getElementById('d-atr').textContent    = s.atr;
         document.getElementById('d-sec').textContent    = `${s.sector_str}/100`;
-        document.getElementById('d-weight').textContent = `%${s.weight_pct}`;
+        document.getElementById('d-weight').textContent = s.weight_pct ? `%${s.weight_pct}` : '—';
         document.getElementById('d-detail').textContent = s.detail || '—';
 
         const fundsBtn = document.getElementById('btn-funds');
