@@ -116,6 +116,11 @@ def _load_daily_bars(symbols: list[str], cache) -> None:
                 ))
             if len(sc.bars["1d"]) >= 2:
                 sc.prev_close = sc.bars["1d"][-2].close
+            # Piyasa kapalıyken de snapshot çalışsın: son kapanışı "last" olarak ata
+            last_bar = sc.bars["1d"][-1]
+            if sc.last <= 0:
+                sc.last = last_bar.close
+                sc.updated_at = last_bar.timestamp
             return 1
 
         # XU100 günlük barları da sakla (RS hesabı için)
