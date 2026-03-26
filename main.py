@@ -551,9 +551,14 @@ async def get_status():
         return dict(_state)
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "last_update": _state.get("last_update")}
+
+
+@app.api_route("/ping", methods=["GET", "HEAD"])
+async def ping():
+    return {"status": "ok"}
 
 
 def _fmt_large_num(val):
