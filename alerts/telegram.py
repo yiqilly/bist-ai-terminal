@@ -12,6 +12,71 @@ from config import CAPITAL_TL, MAX_POSITIONS, RISK_PER_TRADE_PCT
 logger = logging.getLogger(__name__)
 
 
+def _best_pick(signals: list, watching: list, heatmap: list) -> dict | None:
+    """
+    Günün en yüksek potansiyelli hissesini seç.
+
+    Öncelik sırası:
+      1. Aktif AL sinyali varsa → en yüksek RS'li
+      2. Watching listesinde → en fazla koşul karşılayan + RS
+      3. Heatmap'te → en yüksek yükseliş + en az eksik koşul
+    """
+    # 1. Aktif sinyal varsa
+    if signals:
+        best = max(signals, key=lambda s: s.get("rs", 0))
+        chg  = next((h.get("change", 0) for h in heatmap if h["symbol"] == best["symbol"]), 0)
+        sign = "+" if chg >= 0 else ""
+        return {
+            "symbol": best["symbol"],
+            "reason": (
+                f"AL sinyali aktif | RS: {best.get('rs', 0):.2f} | "
+                f"Giriş: ₺{best.get('entry', 0):.2f} | "
+                f"Hedef: ₺{best.get('target', 0):.2f} | "
+                f"Bugün: {sign}{chg:.1f}%"
+            ),
+        }
+
+    # 2. Watching listesinden en iyi aday
+    if watching:
+        def _score(w):
+            met_count  = len(w.get("met", []))
+            miss_count = len(w.get("miss", []))
+            rs         = w.get("rs", 1.0)
+            sec        = w.get("sector_str", 50.0)
+            return met_count * 20 + rs * 10 + sec / 10 - miss_count * 5
+
+        best = max(watching, key=_score)
+        met  = best.get("met", [])
+        miss = best.get("miss", [])
+        chg  = next((h.get("change", 0) for h in heatmap if h["symbol"] == best["symbol"]), 0)
+        sign = "+" if chg >= 0 else ""
+        return {
+            "symbol": best["symbol"],
+            "reason": (
+                f"RS: {best.get('rs', 0):.2f} | "
+                f"Sektör: {best.get('sector_str', 0):.0f} | "
+                f"Karşılanan: {', '.join(met) if met else '—'} | "
+                f"Bekleyen: {', '.join(miss) if miss else '—'} | "
+                f"Bugün: {sign}{chg:.1f}%"
+            ),
+        }
+
+    # 3. Heatmap'ten en yüksek değişim + en az eksik koşul
+    candidates = [h for h in heatmap if h.get("change", 0) > 0]
+    if not candidates:
+        return None
+    best = max(candidates, key=lambda h: (len(h.get("met", [])), h.get("change", 0)))
+    chg  = best.get("change", 0)
+    met  = best.get("met", [])
+    return {
+        "symbol": best["symbol"],
+        "reason": (
+            f"Bugün: +{chg:.1f}% | "
+            f"Karşılanan kriterler: {', '.join(met) if met else '—'}"
+        ),
+    }
+
+
 def _calc_quantity(entry: float, stop: float) -> int:
     """Risk yönetimine göre lot hesapla."""
     if entry <= 0 or stop <= 0 or entry <= stop:
@@ -140,6 +205,71 @@ class TelegramNotifier:
             f"<i>{getattr(sig, 'detail', '')}</i>\n"
             f"⏱ {datetime.now().strftime('%H:%M:%S')}"
         )
+
+    # ── Saatlik Piyasa Özeti ──────────────────────────────────
+
+    def send_market_summary(self, state: dict):
+        market   = state.get("market", {})
+        signals  = state.get("signals", [])
+        watching = state.get("watching", [])
+
+        index_val = market.get("index_val", 0)
+        change    = market.get("change", 0)
+        advancing = market.get("advancing", 0)
+        declining = market.get("declining", 0)
+        unchanged = market.get("unchanged", 0)
+        regime    = market.get("regime", "—")
+
+        change_arrow = "📈" if change >= 0 else "📉"
+        change_sign  = "+" if change >= 0 else ""
+
+        regime_emoji = {
+            "BULL": "🟢", "WEAK BULL": "🟡",
+            "NÖTR": "⚪", "WEAK BEAR": "🟠", "BEAR": "🔴",
+        }.get(regime, "⚪")
+
+        lines = [
+            f"📊 <b>SAATLIK BIST ANALİZİ</b> — {datetime.now().strftime('%H:%M')}",
+            f"────────────────────",
+            f"🏛 <b>XU100:</b> {index_val:,.0f}  {change_arrow} {change_sign}{change:.2f}%",
+            f"📈 Yükselen: <b>{advancing}</b>  📉 Düşen: <b>{declining}</b>  ➡️ Değişmez: <b>{unchanged}</b>",
+            f"{regime_emoji} <b>Rejim:</b> {regime}",
+            f"────────────────────",
+        ]
+
+        if signals:
+            lines.append(f"🔵 <b>Aktif Sinyal ({len(signals)}):</b>")
+            for s in signals[:5]:
+                lines.append(f"  • #{s['symbol']} — Giriş: ₺{s['entry']:.2f} | H: ₺{s['target']:.2f}")
+        else:
+            lines.append(f"🔵 <b>Sinyal:</b> YOK")
+
+        lines.append(f"────────────────────")
+
+        if watching:
+            lines.append(f"👁 <b>İzlemede ({len(watching)} hisse):</b>")
+            for w in watching[:5]:
+                miss = w.get("miss", [])
+                rs   = w.get("rs", 0)
+                miss_str = ", ".join(miss) if miss else "—"
+                lines.append(f"  • #{w['symbol']} — RS:{rs:.2f} | Bekleyen: {miss_str}")
+            if len(watching) > 5:
+                lines.append(f"  <i>...ve {len(watching)-5} hisse daha</i>")
+        else:
+            lines.append(f"👁 <b>İzlemede:</b> YOK")
+
+        # ── Günün En İyi Adayı ────────────────────────────────
+        pick = _best_pick(signals, watching, state.get("heatmap", []))
+        lines.append(f"────────────────────")
+        if pick:
+            lines.append(
+                f"⭐ <b>Günün Adayı: #{pick['symbol']}</b>\n"
+                f"   {pick['reason']}"
+            )
+        else:
+            lines.append(f"⭐ <b>Günün Adayı:</b> Henüz belirsiz")
+
+        self.send("\n".join(lines))
 
     # ── Sat Bildirimi ─────────────────────────────────────────
 

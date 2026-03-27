@@ -139,6 +139,34 @@ def _load_daily_bars(symbols: list[str], cache) -> None:
         logger.error(f"Gunluk bar yukleme hatasi: {e}")
 
 
+def _hourly_summary_loop(telegram, get_state_fn):
+    """
+    Her saat başı (piyasa saatlerinde) genel piyasa özeti gönderir.
+    Türkiye saati 10:00 - 18:00 arası aktif (UTC+3).
+    """
+    import time as _time
+    from datetime import timezone, timedelta
+
+    TZ_TR = timezone(timedelta(hours=3))
+
+    while True:
+        now_tr = datetime.now(TZ_TR)
+        # Bir sonraki saat başını hesapla
+        next_hour = now_tr.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+        wait_sec  = (next_hour - now_tr).total_seconds()
+        _time.sleep(wait_sec)
+
+        now_tr = datetime.now(TZ_TR)
+        hour   = now_tr.hour
+        # Sadece piyasa saatlerinde gönder (10:00 - 18:00)
+        if 10 <= hour < 18:
+            try:
+                state = get_state_fn()
+                telegram.send_market_summary(state)
+            except Exception as e:
+                logger.error(f"Saatlik özet hatası: {e}")
+
+
 def _daily_bar_update_loop(symbols: list[str], cache) -> None:
     """
     Her gün 18:30'da (BIST kapanışı sonrası) son günlük barı ekler.
@@ -736,6 +764,14 @@ async def startup_event():
         args=(bus, strategy, portfolio, telegram, source, snap_cache, news_engine),
         daemon=True,
         name="pipeline-loop",
+    ).start()
+
+    # Saatlik piyasa özeti
+    threading.Thread(
+        target=_hourly_summary_loop,
+        args=(telegram, lambda: dict(_state)),
+        daemon=True,
+        name="hourly-summary",
     ).start()
 
     logger.info("Hazır.")
