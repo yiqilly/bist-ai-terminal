@@ -341,13 +341,7 @@ def _pipeline_loop(bus, strategy, portfolio, telegram, source_label, cache=None,
                 elif sig.state.value in ("WATCHING", "CONFIRMING"):
                     watching_out.append(_serialize_signal(sig))
                     
-                    key = f"WATCH_{sym}_{sig.state.value}_{sig._date}"
-                    if key not in _notified:
-                        _notified.add(key)
-                        try:
-                            telegram.send_watch(sig)
-                        except Exception:
-                            pass
+                    pass  # İzleme bildirimleri kapalı (web sitede görünüyor)
 
             # Piyasa özeti — cache'ten güvenilir change_pct al
             advancing = declining = unchanged = 0
